@@ -1,0 +1,3 @@
+names
+bs4
+requests

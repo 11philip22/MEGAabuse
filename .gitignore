@@ -1,0 +1,7 @@
+.idea/
+__pycache__/
+resume/
+logs/
+accounts.txt
+done.txt
+out.txt

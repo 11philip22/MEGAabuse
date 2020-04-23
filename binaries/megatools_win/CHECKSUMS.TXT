@@ -1,0 +1,57 @@
+To verify the origin of megatools, run: 
+
+  gpg --verify CHECKSUMS.TXT
+  gpg -d CHECKSUMS.TXT | sha256sum -c
+
+You'll need to acquire and verify the origin of my public key in some
+trustworthy way:
+
+  Ondrej Jirman <megous@megous.com>
+
+Key fingerprint: 9AB138B20691621CD4CF92026E6426C677CFEFF1
+
+Notice that you can't trust the unsigned part of this message, and when
+you'll feel the need to verify the files, it's already too late to put
+trust in the validity of above mentioned information. So get the key
+early and build trust gradually with the consistency of megatools
+releases.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+3aedc5accd1d7516d302d72f4dd75b9a9c2f7dccda6259da6fd64c2669941fb0  DEPS.TXT
+be652db0788dcd5cdeacd0e5fd6e5a88af1b0b6047e28753a4df030d7d296ca4  docs/megatools-copy.html
+72c15cbb1dc1ee0a05aab493decde100893cfd411f2b9fe1e035bb2213323316  docs/megatools-ls.html
+6436debf550ffcb546750ea99b386de2b91684cb2c34b78a03178fda03a6f274  docs/megatools-reg.html
+ab082e905a0814a90b1331df83f44126221fd4a569e1b72282b9c5e91c58b1e2  docs/megatools-get.html
+3216e0ffed286ce3e218b28588a0a1aa61cf7fbb55035f92c5b9ba28f42bfec5  docs/megarc.html
+04e0ce8d0d6258a18b7c8dd424bc79cbcdf4d051e6f359852b2f79c9ec9a9199  docs/megatools-put.html
+b7ec176676f8ecb68516b1915660f515779735f581e2e95679445bb7096b33ed  docs/megatools.html
+7b1102e55cd98cead87fb3ceec1dc7de894664a5eaa963ed91a47da2c07d3597  docs/megatools-dl.html
+81a85f7640d184b9dd36ef9f6206e7941c8d1dc56d7491136332c66e8d3a3fdc  docs/megatools-mkdir.html
+ffed61d00cc30589bc7e8ca731fa0a135250cbaad1e1e6a4b890b7111717869f  docs/docbook-xsl.css
+72c71a2c8615a9efe4f8230983de37bc053c7c6a888607425118a6b9467eb468  docs/megatools-df.html
+4223561ee92cc9188ca2db0121e38688438a2d83ca08f05763a864e8ee285016  docs/megatools-rm.html
+f32ed5870db3bdb2e96d5edc8fe3820d0def0c8c75fc6dee49a0dc6be0765ff1  LICENSE.TXT
+c7bf9956a92137fa2f43207653ab1f134b5060aa00e657e335267f71c0ec3bad  megacmd.bat
+f6cdddf8dd25cd1076a8406b9cfc15a76ed9abebb6d09f84c1548d62e6ff9c7b  mega.ini
+fa05fc73d5693c1507d9da84a9d25497011c4681fa96229e2785053ca33ed82d  megatools.exe
+4ffd44a5e11aa7208535b11accf29fdb384d4d7da37aa9572d3cee2abc128217  NEWS.TXT
+4ee900ffb736d0040e992745f0f5e37506b5ab7cb2f54227feba7943117c7585  README.TXT
+146678881cd4097ab14aa59168fe329f8ee56e840a2b890c2043a2214a3864ce  TODO.TXT
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEmrE4sgaRYhzUz5ICbmQmxnfP7/EFAltzGdAACgkQbmQmxnfP
+7/G2Rg/8De2IS8Ak3WDr3MQsJ807GSglnlEHAd7WAdsV1A/3xXNC1+FGeIrkklrN
+/eSSP6OnpbRlQ8kZKdnkuEMeqhLJu84XCHuOS1pBpG7vayca6PMXsAyWsOKtFyd/
+37XJ6xKYYFc1FOBKxJj3S0Q3oDq++6L9EIYFCKereg3ZlTF5pvrvJOJ7UfTYI9R5
+xSYfv2Pm/HPnpUY/wsdFHDAEACEWbkNurQ0rDMaULt4oHIl6r5WfM74j9ILaR1XL
+qRWyewDb1EeC7hSH++bt3yofl1VDQI6WdtUlYDLC1XLJ2/JEPXiAKhUTYIxNwmhg
+1CKxsR1HydCHqlmUN6jkdxlnucn/idi/xItpiFbxT/3su4qta5m5Ov0KLogobhq3
+0l45I/256lX2A5H3h3zOV2sqvAltMa0FRPqG6eQiLsIjNuWFwqlowAH+85c3i5wS
+A/SSNpV3Dz8S7/Y4mzaLqL2Q5BlEJSYuzakPOpS7SGbMpNbp1MlpHdfg/CvkAiwY
+adrTeQF1jfRA0PosBsjG48QXnG9OAonkGlIQ+KFdwt3WJNvjXAeLNq52O9kBaXz9
+fiCOP73F/HDLElOB+BGtJm59Gt608OeqEKBtn6UPKTO1TepqOr7RRPmKS5kAZBl4
+bt0/FDFGlcfMntnRiT5l3ueIdSK06kD6KmAjh8ka5U+HNJAQtjs=
+=iP8t
+-----END PGP SIGNATURE-----

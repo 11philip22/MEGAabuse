@@ -1,0 +1,55 @@
+To verify the origin of megatools, run: 
+
+  gpg --verify CHECKSUMS.TXT
+  gpg -d CHECKSUMS.TXT | sha256sum -c
+
+You'll need to acquire and verify the origin of my public key in some
+trustworthy way:
+
+  Ondrej Jirman <megous@megous.com>
+
+Key fingerprint: 9AB138B20691621CD4CF92026E6426C677CFEFF1
+
+Notice that you can't trust the unsigned part of this message, and when
+you'll feel the need to verify the files, it's already too late to put
+trust in the validity of above mentioned information. So get the key
+early and build trust gradually with the consistency of megatools
+releases.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+193b90a58e902afa19f8421b46dd0b3d37b389c988413001706481c3ecf644d2  DEPS
+f38a561a8f757539a087a545d18a5eb4a787ff45789e426f33c381e1eb1712d4  docs/megatools-copy.html
+5e0b21f76bfa93f8939876dfd8f6b268daa181a7d494d6152660ecf7fd3d7231  docs/megatools-ls.html
+18b12d851842091311d8e5b35794f7f246799faf0113ee46ab6dbc13291d2cd8  docs/megatools-reg.html
+d34a6ba29d5419616894f58490220a65a05848cc58a3e46e6b203d4951f6fee9  docs/megatools-get.html
+6cb0e09d0fc61aaf80f0e019b700ee39a33bfd7f558e26b4a5fe715d14f7ee39  docs/megarc.html
+543dca08f28829e1d1f553455b907261c072930809483b6368cae18e9a18c787  docs/megatools-put.html
+31bce3fcd4b8c84b3a9701862eaff8414a9a19832fa8ef0ed2ace51127efb036  docs/megatools.html
+a203fb7c560d1cfb06da544c5f3a5b3eb6e5d376b6a21e76389b08713b1b3cf3  docs/megatools-dl.html
+0f8866b5f978d599bb914ac9f5cc0ca062b11b35c1fcf4d679a5997c20b64eff  docs/megatools-mkdir.html
+ffed61d00cc30589bc7e8ca731fa0a135250cbaad1e1e6a4b890b7111717869f  docs/docbook-xsl.css
+591388625514505b53be6a3a4ec65b21635f9b5c9b43914c010bdcd28fa1c19c  docs/megatools-df.html
+b9726aa4c8f05fe24dd580cbb63669bdb1c4e1e29d1a8b20c2861beb7bd045a8  docs/megatools-rm.html
+bdc80012bf474144235370e6baaaffab6d381df27e3b1610c77e2e958afdb7a4  LICENSE
+983cd3b1625411d63eb6b74076eb97b69387224822b2228d7183000389bb522a  megatools
+584bb793493371d57abaea25998d584a096668b1eeb0a57bb96647ae5ca4a2b0  NEWS
+67f584958fe7b155107258776d789175cf90225402901020036126dd952e42dc  README
+dc1be20f5c7a5bb32ad928e6e2d2ebdf473b5ef6f58a20bd38b22620973121b9  TODO
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEmrE4sgaRYhzUz5ICbmQmxnfP7/EFAltzE5MACgkQbmQmxnfP
+7/FYORAAkAmBxoXxArIndI+yBkUwr8BZ3RRxXdXKXdMGURT1Qc0wSoUCAM1g77tv
+fpKZSN4XDcEowj5h6i2sM3yh+Th3H3k7tYzTS7EwAL1mjrtZAXLvj7hCIq7xTFic
+xxXgOj7op15yU2wRs5sf5hyAA/16nXBb4qsdXVHW0MUMzoUFIjMwP94aZ36XlXsc
+uYjfLNpzFX4yphE/hhg8snq9AJd1KfGC1LLJSKNFImaadMJiPKn4KRBLhiqOzcRs
+4zq1t0ic4ZTXMP6yzlhGzDesrQTN7W/49VitDMCX/CgpDu44wLfMe0oaIgKIb6or
+YOx0HEXrshLI9rtF7/6wgRa9eS+A1ib+2B7ke1eARi6/LIQOmy6pk5V81DpZq624
+PP3iOaAwa1Z8pPLMrJ19u+9P10lkme770A8oi/Y37W3Qrnu/eh4kZThE622uYqCW
+2EmXhF6Yk7MhqsCBlXjCDRv5AHcjemhwVOWDPu3hq1MadXxaWhL4H1pIWdeeRGr2
+rTD6zUhUOQic6/EcoSXTOC2/BAooe10l3R2PceaGotAUFm4f7HXw5wlbHlfhhJaD
+BxWfttYINIXuvPubqxwTZYGkr2FDyPqToe+0uExK09M4h+2yij91VI+47D9gaUiB
+Sa24s0jjV0yFFSp2R8vofv8XnNxXo9/jq70LThmERJ4ueIqvTVA=
+=n7al
+-----END PGP SIGNATURE-----
