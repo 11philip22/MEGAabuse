@@ -487,7 +487,7 @@ def upload_folder(folder_path):
         logger.info(f"Uploading {folder_path}")
 
     paths = find_files(folder_path, [".json", ])
-    file_lists = divide_files(paths, 25000000000)
+    file_lists = divide_files(paths, 15000000000)
     folder_name = Path(folder_path).parts[-1]
 
     chunks = []
