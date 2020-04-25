@@ -50,25 +50,12 @@ parser.add_argument(
     help="Uploads all sub-folders of specified folder"
 )
 parser.add_argument(
-    "-d", "--upload-dir",
-    required=False,
-    type=str,
-    metavar="<dir>",
-    help="Uploads a folder"
-)
-parser.add_argument(
-    "-dd", "--upload-dirs",
+    "-d", "--upload-dirs",
     required=False,
     type=str,
     nargs='+',
     metavar="<dir>",
     help="Uploads multiple folders"
-)
-parser.add_argument(
-    "-k", "--keep-alive",
-    required=False,
-    action="store_true",
-    help="Reads from accounts.txt and keeps the accounts active"
 )
 parser.add_argument(
     "-c", "--check-urls",
@@ -87,6 +74,12 @@ parser.add_argument(
     required=False,
     action="store_true",
     help="Output debug logs"
+)
+parser.add_argument(
+    "-n", "-no-write",
+    required=False,
+    action="store_true",
+    help="Dont write to any file except log file"
 )
 
 args = parser.parse_args()
@@ -281,9 +274,10 @@ def get_account(amount):
     """""Wrapper for guerrilla_gen_bulk"""
     accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg")
     # Write credentials to file
-    with open(account_file, "a") as file:
-        for user, password in accounts.items():
-            file.write(f"{user};{password}" + linesep)
+    if not args.no_write:
+        with open(account_file, "a") as file:
+            for user, password in accounts.items():
+                file.write(f"{user};{password}" + linesep)
     return accounts
 
 
@@ -426,7 +420,8 @@ def upload_chunks(chunks, dir_name):
 
                 # Update resume data
                 uploaded_files.append(file)
-                update_json_file(resume_file, resume_data)
+                if not args.no_write:
+                    update_json_file(resume_file, resume_data)
             else:
                 logger.info(f"Skipping: {file}")
 
@@ -504,8 +499,9 @@ def upload_folder(folder_path):
     export_urls = upload_chunks(chunks, folder_name)
 
     done.append(folder_path)
-    with open(done_file, "a") as file:
-        file.write(folder_path + linesep)
+    if not args.no_write:
+        with open(done_file, "a") as file:
+            file.write(folder_path + linesep)
 
     return export_urls
 
@@ -550,12 +546,6 @@ if args.upload_subdirs:
     for sub_folder in listdir(d_path):
         run(Path(d_path, sub_folder))
 
-# Upload dir
-elif args.upload_dir:
-    logger.debug("Uploading directory")
-
-    run(args.upload_dir)
-
 # Upload multiple dirs
 elif args.upload_dirs:
     logger.debug("Uploading multiple directories")
@@ -574,57 +564,5 @@ if all_export_urls:
             # Print export url
             print(e)
     print()
-
-
-# #################################### End MEGAabuse ###################################################################
-# #################################### Keep alive ######################################################################
-
-# Keeps accounts active
-if args.keep_alive:
-    logger.debug("Keeping accounts alive")
-
-    with open(account_file) as account_f:
-        # Read accounts from file
-        for file_line in account_f:
-            line = file_line.strip("\n")
-            usern, passwd = line.split(";")
-
-            # Log in and log out using megacmd
-            logger.info(f"Logging into: {usern} {passwd}")
-            logout()
-            login(usern, passwd)
-            logout()
-
-
-# #################################### End keep alive ##################################################################
-# #################################### Url health check ################################################################
-
-# Check if url is not taken down
-if args.check_urls:
-    exports = []
-    e_urls = []
-
-    with open(output_file) as outp_file:
-        # Dividing outfile into list by blank line
-        for file_line in outp_file:
-            clean_line = file_line.strip("\n")
-
-            if file_line == "\n":
-                exports.append(e_urls)
-                e_urls = []
-            else:
-                e_urls.append(clean_line)
-
-    data_dict = {}
-    for export in exports:
-        # First line is folder path. All lines after that export urls
-        data_dict.update({export[0]: export[1:]})
-
-    for fn, el in data_dict.items():  # Folder path, export list; List containing exported urls
-        logger.info(f"Checking health of: {fn}")
-
-        for u in el:
-            logger.debug(f"Checking {u}")
-            # todo: check if url is up
 
 logger.info("Done")
