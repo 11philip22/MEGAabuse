@@ -50,14 +50,7 @@ parser.add_argument(
     help="Uploads all sub-folders of specified folder"
 )
 parser.add_argument(
-    "-d", "--upload-dir",
-    required=False,
-    type=str,
-    metavar="<dir>",
-    help="Uploads a folder"
-)
-parser.add_argument(
-    "-dd", "--upload-dirs",
+    "-d", "--upload-dirs",
     required=False,
     type=str,
     nargs='+',
@@ -87,6 +80,12 @@ parser.add_argument(
     required=False,
     action="store_true",
     help="Output debug logs"
+)
+parser.add_argument(
+    "-n", "--no-write",
+    required=False,
+    action="store_true",
+    help="Dont write to any file except log file"
 )
 
 args = parser.parse_args()
@@ -281,9 +280,10 @@ def get_account(amount):
     """""Wrapper for guerrilla_gen_bulk"""
     accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg")
     # Write credentials to file
-    with open(account_file, "a") as file:
-        for user, password in accounts.items():
-            file.write(f"{user};{password}" + linesep)
+    if not args.no_write:
+        with open(account_file, "a") as file:
+            for user, password in accounts.items():
+                file.write(f"{user};{password}" + linesep)
     return accounts
 
 
@@ -379,12 +379,14 @@ def upload_chunks(chunks, dir_name):
     if not resume_file.is_file():
         resume_file.touch()
 
-    # Try to load data from resume file if fails create empty resume data var
-    with open(resume_file, "r+") as json_file:
-        try:
-            resume_data = json.load(json_file)
-        except json.decoder.JSONDecodeError:
-            resume_data = []
+    resume_data = []
+    if not args.no_write:
+        # Try to load data from resume file if fails create empty resume data var
+        with open(resume_file, "r+") as json_file:
+            try:
+                resume_data = json.load(json_file)
+            except json.decoder.JSONDecodeError:
+                pass
 
     # The chunk we are working with
     c_counter = 0
@@ -426,7 +428,8 @@ def upload_chunks(chunks, dir_name):
 
                 # Update resume data
                 uploaded_files.append(file)
-                update_json_file(resume_file, resume_data)
+                if not args.no_write:
+                    update_json_file(resume_file, resume_data)
             else:
                 logger.info(f"Skipping: {file}")
 
@@ -482,7 +485,7 @@ def upload_folder(folder_path):
     """"Uploads a folder to mega.nz returns download urls"""
     logger.debug("Upload folder function called")
 
-    if folder_path in done:
+    if folder_path in done and not args.no_write:
         logger.info(f"Skipping: {folder_path}")
         return
     else:
@@ -504,8 +507,9 @@ def upload_folder(folder_path):
     export_urls = upload_chunks(chunks, folder_name)
 
     done.append(folder_path)
-    with open(done_file, "a") as file:
-        file.write(folder_path + linesep)
+    if not args.no_write:
+        with open(done_file, "a") as file:
+            file.write(folder_path + linesep)
 
     return export_urls
 
@@ -537,7 +541,8 @@ def run(folder_path):
     exported_urls = upload_folder(folder_path)
     logger.info(f"Done uploading: {folder_path}")
 
-    urls_to_file(exported_urls, folder_path)
+    if not args.no_write:
+        urls_to_file(exported_urls, folder_path)
     all_export_urls.update({folder_path: exported_urls})
 
 
@@ -549,12 +554,6 @@ if args.upload_subdirs:
 
     for sub_folder in listdir(d_path):
         run(Path(d_path, sub_folder))
-
-# Upload dir
-elif args.upload_dir:
-    logger.debug("Uploading directory")
-
-    run(args.upload_dir)
 
 # Upload multiple dirs
 elif args.upload_dirs:
@@ -628,3 +627,4 @@ if args.check_urls:
             # todo: check if url is up
 
 logger.info("Done")
+
