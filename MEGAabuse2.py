@@ -76,7 +76,7 @@ parser.add_argument(
     help="Output debug logs"
 )
 parser.add_argument(
-    "-n", "-no-write",
+    "-n", "--no-write",
     required=False,
     action="store_true",
     help="Dont write to any file except log file"
@@ -91,10 +91,6 @@ try:
 except AttributeError:
     # -h or --help has not been passed continue
     pass
-
-# Turn on logging for --check-urls and --keep-alive
-if args.check_urls or args.keep_alive:
-    args.v = True
 
 # Create logs folder
 log_dir = Path(script_dir, "logs")
@@ -373,12 +369,14 @@ def upload_chunks(chunks, dir_name):
     if not resume_file.is_file():
         resume_file.touch()
 
-    # Try to load data from resume file if fails create empty resume data var
-    with open(resume_file, "r+") as json_file:
-        try:
-            resume_data = json.load(json_file)
-        except json.decoder.JSONDecodeError:
-            resume_data = []
+    resume_data = []
+    if not args.no_write:
+        # Try to load data from resume file if fails create empty resume data var
+        with open(resume_file, "r+") as json_file:
+            try:
+                resume_data = json.load(json_file)
+            except json.decoder.JSONDecodeError:
+                pass
 
     # The chunk we are working with
     c_counter = 0
@@ -533,7 +531,8 @@ def run(folder_path):
     exported_urls = upload_folder(folder_path)
     logger.info(f"Done uploading: {folder_path}")
 
-    urls_to_file(exported_urls, folder_path)
+    if not args.no_write:
+        urls_to_file(exported_urls, folder_path)
     all_export_urls.update({folder_path: exported_urls})
 
 
