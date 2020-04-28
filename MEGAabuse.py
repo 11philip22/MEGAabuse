@@ -19,10 +19,10 @@ import argparse
 import atexit
 import json
 import logging
+import multiprocessing
 import re
 import subprocess
 import time
-import multiprocessing
 from os import linesep, listdir, path, walk
 from pathlib import Path
 from random import choice
@@ -517,6 +517,7 @@ def upload_folder(folder_path, proxy=False):
 
     paths = find_files(folder_path, [".json", ])
     file_lists = divide_files(paths, 15000000000)
+    logger.info(f"{folder_path}: Found {len(file_lists)} files")
     folder_name = Path(folder_path).parts[-1]
 
     chunks = []
@@ -608,7 +609,7 @@ def urls_to_file(urls: list, folder_path):
 upload_queue = []  # To be downloaded
 
 
-def manager():
+def upload_manager():
     """"Starts upload process and processes results"""
     with multiprocessing.Pool(processes=threads) as pool:
         results = pool.map(worker, upload_queue)  # Map pool to upload queue
@@ -649,7 +650,7 @@ elif args.upload_dirs:
         upload_queue.append(folder)
 
 if args.upload_dirs or args.upload_subdirs:
-    manager()  # Start Upload process
+    upload_manager()  # Start Upload process
 
 
 # #################################### End MEGAabuse ###################################################################
