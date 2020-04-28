@@ -15,8 +15,6 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# todo: Replace megacmd with mega python api
-
 import argparse
 import atexit
 import json
@@ -32,12 +30,9 @@ from sys import exit, platform
 from bs4 import BeautifulSoup
 from names import get_first_name
 
-# sys_path.extend(['/home/myhome/devel/MEGA.nz/MEGAabuse', ])  # Uncomment for ipython ssh
 import guerrillamail
 
-script_dir = path.dirname(path.realpath(__file__))  # Comment for ipython
-# script_dir = "V:\\MEGA.nz\\MEGAabuse"  # Uncomment for ipython
-# script_dir = "/home/myhome/devel/MEGA.nz/MEGAabuse"  # Uncomment for ipython ssh
+script_dir = path.dirname(path.realpath(__file__))
 
 # Parse arguments
 parser = argparse.ArgumentParser(description="MEGAabuse")
@@ -55,7 +50,7 @@ parser.add_argument(
     type=str,
     nargs='+',
     metavar="<dir>",
-    help="Uploads multiple folders"
+    help="Upload one or multiple folders"
 )
 parser.add_argument(
     "-k", "--keep-alive",
@@ -85,7 +80,7 @@ parser.add_argument(
     "-n", "--no-write",
     required=False,
     action="store_true",
-    help="Dont write to any file except log file"
+    help="Dont read or write any file except log file"
 )
 
 args = parser.parse_args()
@@ -180,7 +175,7 @@ def extract_url(mail_str):
             return link.get("href").replace('3D"', "").replace('"', "")
 
 
-def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir):
+def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
     """"Creates mega.nz accounts using guerrilla mail"""
     start = time.time()
     logger.info("Starting a new bulk")
@@ -202,6 +197,8 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir):
         else:
             email_password = random_text(21)
         cmd = f"{megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
+        if proxy:
+            cmd += f" --proxy {proxy}"
         confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
         confirm_text = confirm_text[confirm_text.find("-"):]
         email_code_pairs[email] = confirm_text
@@ -266,6 +263,7 @@ if platform == "linux" or platform == "win32":
 
     # Stop MEGA cmd server when program exits
     def exit_handler():
+        logging.debug("Killing MEGA cmd server")
         if mcmd_p:
             mcmd_p.terminate()
     atexit.register(exit_handler)
@@ -276,9 +274,9 @@ if not account_file.is_file():
     account_file.touch()
 
 
-def get_account(amount):
+def get_account(amount, proxy=False):
     """""Wrapper for guerrilla_gen_bulk"""
-    accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg")
+    accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg", proxy)
     # Write credentials to file
     if not args.no_write:
         with open(account_file, "a") as file:
@@ -345,21 +343,25 @@ def export_folder(username, password, folder_name):
     return url
 
 
-def create_folder(user_name, password, folder_name):
+def create_folder(user_name, password, folder_name, proxy=False):
     """"Create a folder om a mega account"""
     logger.debug("Create folder function called")
 
     cmd = f"{megatools_path} mkdir {folder_name} -u {user_name} -p {password}"
+    if proxy:
+        cmd += f" --proxy {proxy}"
     logger.debug(cmd)
 
     subprocess.Popen(cmd, shell=True).wait()
 
 
-def upload_file(username, password, remote_path, file_path):
+def upload_file(username, password, remote_path, file_path, proxy=False):
     """"Uploads a file to mega"""
     logger.debug("Upload file function called")
 
     cmd = f"{megatools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
+    if proxy:
+        cmd += f" --proxy {proxy}"
     logger.debug(cmd)
 
     subprocess.Popen(cmd, shell=True).wait()
@@ -371,7 +373,7 @@ if not resume_dir.is_dir():
     resume_dir.mkdir()
 
 
-def upload_chunks(chunks, dir_name):
+def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
     """"Uploads the chunks to mega.nz"""
     logger.debug("Upload chunks function called")
 
@@ -400,7 +402,7 @@ def upload_chunks(chunks, dir_name):
                 break
             except IndexError:
                 chunk_resume = {
-                    "credentials": get_account(1),
+                    "credentials": get_account(1, proxy),
                     "folder name": chunk["folder name"],
                     "uploaded files": []
                 }
@@ -414,7 +416,7 @@ def upload_chunks(chunks, dir_name):
         uploaded_files = resume_data[c_counter]["uploaded files"]
 
         # Create folder
-        create_folder(user_name, password, f"/Root/{folder_name}")
+        create_folder(user_name, password, f"/Root/{folder_name}", proxy)
 
         for file in chunk["files"]:
             if file not in uploaded_files:
@@ -424,7 +426,7 @@ def upload_chunks(chunks, dir_name):
                 extension = file.split(".")[-1]
                 file_name = f"{file_path.stem}.{extension}"
 
-                upload_file(user_name, password, f"/Root/{folder_name}/{file_name}", file)
+                upload_file(user_name, password, f"/Root/{folder_name}/{file_name}", file, proxy)
 
                 # Update resume data
                 uploaded_files.append(file)
@@ -481,7 +483,7 @@ else:
         done = [line.rstrip() for line in f]
 
 
-def upload_folder(folder_path):
+def upload_folder(folder_path, proxy=False):
     """"Uploads a folder to mega.nz returns download urls"""
     logger.debug("Upload folder function called")
 
@@ -504,7 +506,7 @@ def upload_folder(folder_path):
         })
 
     logger.info(f"Uploading: {len(chunks)} chunks")
-    export_urls = upload_chunks(chunks, folder_name)
+    export_urls = upload_chunks(chunks, folder_name, proxy)
 
     done.append(folder_path)
     if not args.no_write:
@@ -627,4 +629,3 @@ if args.check_urls:
             # todo: check if url is up
 
 logger.info("Done")
-
