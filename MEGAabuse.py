@@ -151,7 +151,7 @@ logger.addHandler(ch)
 
 # #################################### Begin account creator ###########################################################
 c = 0  # Total accounts created
-# c_lock = multiprocessing.Lock()  # todo: implement when multiprocessing is supported
+# c = multiprocessing.Manager().Value(int, 0)  # todo: implement when multiprocessing is supported
 
 
 def random_text(length):
@@ -504,10 +504,13 @@ else:
     with open(done_file) as f:
         done = [line.rstrip() for line in f]
 
+total_files = multiprocessing.Manager().Value(int, 0)  # todo: Print somewhere
+
 
 def upload_folder(folder_path, proxy=False):
     """"Uploads a folder to mega.nz returns download urls"""
     logger.debug("Upload folder function called")
+    global total_files
 
     if folder_path in done and not args.no_write:
         logger.info(f"Skipping: {folder_path}")
@@ -518,6 +521,7 @@ def upload_folder(folder_path, proxy=False):
     paths = find_files(folder_path, [".json", ])
     file_lists = divide_files(paths, 15000000000)
     logger.info(f"{folder_path}: Found {len(file_lists)} files")
+    total_files += len(file_lists)
     folder_name = Path(folder_path).parts[-1]
 
     chunks = []
@@ -540,6 +544,7 @@ def upload_folder(folder_path, proxy=False):
 
 
 proxies_store = multiprocessing.Queue()  # Available proxies
+# proxies_store = multiprocessing.Manager().Queue()  # Available proxies
 
 if args.proxy:
     # If --proxy is passed load proxies from proxy file
