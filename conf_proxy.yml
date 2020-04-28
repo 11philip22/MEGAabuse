@@ -1,0 +1,77 @@
+---
+- hosts: all
+  remote_user: root
+  
+  tasks:
+  - name: Update the apt package index
+    become: yes
+    apt:
+      name: "*"
+      state: latest
+      update_cache: yes
+      force_apt_get: yes
+  
+  - name: Install packages for apt add repository over HTTPS
+    become: yes
+    apt:
+      name: "{{ packagesdep }}"
+      force_apt_get: yes
+      state: latest
+      update_cache: yes
+    vars:
+      packagesdep:
+      - git
+      - apt-transport-https
+      - ca-certificates
+      - wget
+      - software-properties-common
+      - gnupg2
+      - curl
+      - python3-pip
+  
+  - name: Add Apt signing key from official docker repo
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+  
+  - name: add docker official repository for Debian Buster
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+      state: present
+  
+  - name: Index new repo into the cache
+    become: yes
+    apt:
+      name: "*"
+      state: latest
+      update_cache: yes
+      force_apt_get: yes
+  
+  - name: Install docker
+    apt:
+      name: "docker-ce"
+      state: latest
+
+  - name: Install docker python module and docker-compose
+    pip:
+      name: 
+        - docker
+        - docker-compose
+
+  - name: "Launch socks5 container"
+    docker_compose:
+      project_name: proxy
+      definition:
+        version: '3.7'
+        
+        services:
+          proxy:
+            image: serjs/go-socks5-proxy
+            environment:
+              - PROXY_USER=kfuwnckis
+              - PROXY_PASSWORD=knduwpcmdfkguwn
+              - PROXY_PORT=1337
+            ports:
+              - 1337:1337
+    register: output
+...
