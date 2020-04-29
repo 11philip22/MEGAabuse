@@ -151,7 +151,7 @@ logger.addHandler(ch)
 
 # #################################### Begin account creator ###########################################################
 c = 0  # Total accounts created
-# c = multiprocessing.Manager().Value(int, 0)  # todo: implement when multiprocessing is supported
+# c = multiprocessing.Value("i", 0)  # todo: implement when multiprocessing is supported
 
 
 def random_text(length):
@@ -450,7 +450,6 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
                     # Update resume data
                     uploaded_files.append(file)
                     if not args.no_write:
-                        logger.debug(f"Updating file: {resume_file} {args.no_write}")
                         update_json_file(resume_file, resume_data)
                 else:
                     logger.error(f"Error uploading: {file}")
@@ -504,7 +503,7 @@ else:
     with open(done_file) as f:
         done = [line.rstrip() for line in f]
 
-total_files = multiprocessing.Manager().Value(int, 0)  # todo: Print somewhere
+total_files = multiprocessing.Value("i", 0)  # todo: Print somewhere
 
 
 def upload_folder(folder_path, proxy=False):
