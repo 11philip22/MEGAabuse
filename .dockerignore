@@ -1,6 +1,15 @@
+.idea/
+__pycache__/
 logs/
 resume/
+binaries/megacmd_mac/
+binaries/megacmd_windows/
+binaries/megatools_mac/
+binaries/megatools_win/
 accounts.txt
 done.txt
 out.txt
 proxies.txt
+docker-compose.yml
+conf_proxy.yml
+Dockerfile

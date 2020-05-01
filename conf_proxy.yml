@@ -1,3 +1,5 @@
+# Ansible playbook
+# Creates a proxy on a debian 10 droplet
 ---
 - hosts: all
   remote_user: root
