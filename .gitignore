@@ -2,6 +2,7 @@
 __pycache__/
 resume/
 logs/
+binaries/megacmd_windows/.megaCmd/
 accounts.txt
 done.txt
 out.txt

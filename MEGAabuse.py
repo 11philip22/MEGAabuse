@@ -111,8 +111,8 @@ except AttributeError:
     pass
 
 # Turn on logging for --check-urls and --keep-alive
-if args.check_urls or args.keep_alive:
-    args.v = True
+if args.check_urls or args.keep_alive:  # Comment if check urls and keep alive are to be
+    args.v = True                       # used at the same as MEGAabuse
 
 # Create logger
 logger = logging.getLogger('MEGAabuse')
@@ -141,7 +141,7 @@ if not args.no_write:  # Dont bother with log files if --no-write is passed
     log_file.touch()
 
     fh = logging.FileHandler(str(log_file))
-    if args.vvv:  # If super verbose output
+    if args.vvv:  # Enable super verbose output
         fh.setLevel(logging.NOTSET)
     else:
         fh.setLevel(logging.DEBUG)
@@ -149,13 +149,11 @@ if not args.no_write:  # Dont bother with log files if --no-write is passed
     logger.addHandler(fh)
 
 ch = logging.StreamHandler()
-if args.vv:
-    # Enable debug mode
+if args.vv:  # Enable debug mode
     ch.setLevel(logging.DEBUG)
-elif args.v:
-    # Enable console log output
+elif args.v:  # Enable console log output
     ch.setLevel(logging.INFO)
-elif args.vvv:
+elif args.vvv:  # Enable super verbose output
     ch.setLevel(logging.NOTSET)
 else:
     ch.setLevel(logging.ERROR)
@@ -221,7 +219,7 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
         cmd = f"{megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
         if proxy:
             cmd += f" --proxy={proxy}"
-        logger.debug(cmd)
+        logger.log(0, cmd)
         confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
         confirm_text = confirm_text[confirm_text.find("-"):]
         email_code_pairs[email] = confirm_text
@@ -326,7 +324,7 @@ def logout():
 
     cmd_path = Path(megacmd_path, "mega-logout")
     cmd = str(cmd_path)
-    logger.debug(cmd)
+    logger.log(0, cmd)
 
     subprocess.Popen(cmd, shell=True, cwd=megacmd_path).wait()
 
@@ -337,7 +335,7 @@ def login(username, password):
 
     cmd_path = Path(megacmd_path, "mega-login")
     cmd = f"{cmd_path} \"{username}\" \"{password}\""
-    logger.debug(cmd)
+    logger.log(0, cmd)
 
     subprocess.Popen(cmd, shell=True, cwd=megacmd_path).wait()
 
@@ -355,7 +353,7 @@ def export_folder(username, password, folder_name):
 
     cmd_path = Path(megacmd_path, "mega-export")
     cmd = f"{cmd_path} -a {folder_name}"
-    logger.debug(cmd)
+    logger.log(0, cmd)
 
     output = subprocess.Popen(
         cmd,
@@ -380,7 +378,7 @@ def create_folder(user_name, password, folder_name, proxy=False):
     cmd = f"{megatools_path} mkdir {folder_name} -u {user_name} -p {password}"
     if proxy:
         cmd += f" --proxy={proxy}"
-    logger.debug(cmd)
+    logger.log(0, cmd)
 
     subprocess.Popen(cmd, shell=True).wait()
 
@@ -392,7 +390,7 @@ def upload_file(username, password, remote_path, file_path, proxy=False):
     cmd = f"{megatools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
     if proxy:
         cmd += f" --proxy={proxy}"
-    logger.debug(cmd)
+    logger.log(0, cmd)
 
     # if subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).wait() == 0:
     if subprocess.Popen(cmd, shell=True).wait() == 0:
@@ -526,15 +524,13 @@ else:
     with open(done_file) as f:
         done = [line.rstrip() for line in f]
 
-# Counter for all the files being processed
+# Counter for all the files being processed. Used for logging purposes.
 total_files_count = multiprocessing.Value("i", 0)
 
 
 def upload_folder(folder_path, proxy=False):
     """"Uploads a folder to mega.nz returns download urls"""
     logger.log(0, "Upload folder function called")
-
-    global total_files_count
 
     if folder_path in done and not args.no_write:
         logger.info(f"Skipping: {folder_path}")
@@ -543,9 +539,9 @@ def upload_folder(folder_path, proxy=False):
         logger.info(f"Uploading {folder_path}")
 
     paths = find_files(folder_path, [".json", ])
+    logger.info(f"{folder_path}: Found {len(paths)} files")
+    total_files_count.value += len(paths)
     file_lists = divide_files(paths, 15000000000)
-    logger.info(f"{folder_path}: Found {len(file_lists)} files")
-    total_files_count.value += len(file_lists)
     folder_name = Path(folder_path).parts[-1]
 
     chunks = []
@@ -590,11 +586,15 @@ else:
     # 1 thread for each proxy
     threads = proxies_store.qsize()
 
+# Counter of all the active workers. Used for logging purposes.
+worker_count = multiprocessing.Value("i", 0)
+
 
 def worker(folder_path):
     """"This is actually just a wrapper around
         upload_folder to handle the proxies"""
-    logger.debug("Worker spawned")
+    worker_count.value +=1  # Add to active worker counter. Used for logging purposes.
+    logger.debug(f"Worker spawned. Total workers: {worker_count.value}")
 
     proxy = False
     if args.proxy:
@@ -611,6 +611,9 @@ def worker(folder_path):
         proxies_store.put(proxy)
         logger.debug(f"Returning proxy: {proxy}")
         logger.debug(f"Proxies in store: {proxies_store.qsize()}")
+
+    worker_count.value -= 1  # Subtract to active worker counter. Used for logging purposes.
+    logger.debug(f"Worker finished. Total workers: {worker_count.value}")
 
     return {folder_path: exported_urls}
 
@@ -640,8 +643,12 @@ upload_queue = []  # To be downloaded
 
 def upload_manager():
     """"Starts upload process and processes results"""
-    with multiprocessing.Pool(processes=threads) as pool:  # todo: Find fix for windows exe
-        results = pool.map(worker, upload_queue)  # Map pool to upload queue
+    try:
+        with multiprocessing.Pool(processes=threads) as pool:  # todo: Find fix for windows exe
+            results = pool.map(worker, upload_queue)  # Map pool to upload queue
+    except Exception as e:
+        logger.error(e)
+        return
 
     all_export_urls = {}
     for r in results:
