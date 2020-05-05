@@ -46,6 +46,7 @@ parser.add_argument(
     "-s", "--upload-subdirs",
     required=False,
     type=str,
+    nargs='+',
     metavar="<dir>",
     help="Uploads all sub-folders of specified folder"
 )
@@ -110,10 +111,6 @@ except AttributeError:
     # -h or --help has not been passed continue
     pass
 
-# Turn on logging for --check-urls and --keep-alive
-if args.check_urls or args.keep_alive:  # Comment if check urls and keep alive are to be
-    args.v = True                       # used at the same as MEGAabuse
-
 # Create logger
 logger = logging.getLogger('MEGAabuse')
 logger.setLevel(logging.DEBUG)
@@ -161,16 +158,20 @@ else:
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+if args.keep_alive and args.no_write:  # These two options are not compatible and keep_alive will not run
+    logger.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
+
 # #################################### Begin account creator ###########################################################
 c = 0  # Total accounts created
-# c = multiprocessing.Value("i", 0)  # todo: implement when multiprocessing is supported
 
 
 def random_text(length):
+    """"Returns a random string with specified length"""
     return ''.join([choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(length)])
 
 
 def random_mail():
+    """"Returns a 30 character string"""
     return ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(30)])
 
 
@@ -237,8 +238,7 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
         current_email = address + "@guerrillamailblock.com"
         current_command = email_code_pairs[current_email].replace(
             "@LINK@", current_link)
-        confirm_commands.append(
-            megareg_dir + " " + current_command.replace("megareg.exe", ""))  # todo: wtf
+        confirm_commands.append("{} {}".format(megareg_dir, current_command.replace("megareg.exe", "")))
 
     # Confirm accounts
     logger.info("Confirming accounts")
@@ -247,14 +247,13 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
 
     c += accounts_number
     logger.info(
-        f"Bulk done. Generated {accounts_number} accounts in {round(time.time() - start, 1)}s. Currently: {c}")
+        "Bulk done. Generated %s accounts in %ss. Currently: %s", accounts_number, round(time.time() - start, 1), c)
     return email_pass_pairs
 
 
 # #################################### End account creator #############################################################
 # #################################### MEGAabuse!!! ####################################################################
 
-# todo: Move up
 # Get the right megatools for your system
 bin_path = Path(script_dir, "binaries")
 if sys.platform == "win32":
@@ -291,12 +290,13 @@ if sys.platform == "linux" or sys.platform == "win32":
     atexit.register(exit_handler)
 
 # Create accounts.txt
-account_file = Path(script_dir, "accounts.txt")
-if not account_file.is_file():
-    account_file.touch()
+if not args.no_write:
+    account_file = Path(script_dir, "accounts.txt")
+    if not account_file.is_file():
+        account_file.touch()
 
-a_lock = multiprocessing.Lock()  # Lock used for locking the pool when creating an account
-                                 # at the moment accounts can nut be created simultaneously
+# Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
+a_lock = multiprocessing.Lock()
 
 
 # todo: Support multiprocessing. confirm_command or something when you do two at once
@@ -367,7 +367,7 @@ def export_folder(username, password, folder_name):
 
     # Return url
     url = url_regex.findall(std_out_text)[0]
-    logger.info(f"Exported: {url}")
+    logger.info("Exported: %s", url)
     return url
 
 
@@ -392,29 +392,31 @@ def upload_file(username, password, remote_path, file_path, proxy=False):
         cmd += f" --proxy={proxy}"
     logger.log(0, cmd)
 
-    # if subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).wait() == 0:
-    if subprocess.Popen(cmd, shell=True).wait() == 0:
-        return True
-    else:
-        return False
+    return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
+    # if subprocess.Popen(cmd, shell=True).wait() == 0:
+    #     return True
+    # else:
+    #     return False
 
 
 # Create resume dir
-resume_dir = Path(script_dir, "resume")
-if not resume_dir.is_dir():
-    resume_dir.mkdir()
+if not args.no_write:
+    resume_dir = Path(script_dir, "resume")
+    if not resume_dir.is_dir():
+        resume_dir.mkdir()
 
 
 def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
     """"Uploads the chunks to mega.nz"""
     logger.log(0, "Upload chunks function called")
 
-    resume_file = Path(resume_dir, f"{dir_name}.json")
-    if not resume_file.is_file() and not args.no_write:
-        resume_file.touch()
-
     resume_data = []
     if not args.no_write:
+        # Create resume file
+        resume_file = Path(resume_dir, f"{dir_name}.json")
+        if not resume_file.is_file() and not args.no_write:
+            resume_file.touch()
+
         # Try to load data from resume file if fails create empty resume data var
         with open(resume_file, "r+") as json_file:
             try:
@@ -430,7 +432,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
         while True:
             try:
                 a = resume_data[c_counter]
-                logger.debug(f"Found chunk in resume data {a}")
+                logger.debug("Found chunk in resume data %s", a)
                 break
             except IndexError:
                 chunk_resume = {
@@ -452,7 +454,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
         for file in chunk["files"]:
             if file not in uploaded_files:
-                logger.info(f"Uploading: {file}")
+                logger.info("Uploading: %s", file)
 
                 file_path = Path(file)
                 extension = file.split(".")[-1]
@@ -466,9 +468,9 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
                     if not args.no_write:
                         update_json_file(resume_file, resume_data)
                 else:
-                    logger.error(f"Error uploading: {file}")
+                    logger.error("Error uploading: %s", file)
             else:
-                logger.info(f"Skipping: {file}")
+                logger.info("Skipping: %s", file)
 
         # Folder path is with / instead of /Root because the export folder function
         # uses megacmd instead of megatools.
@@ -517,12 +519,13 @@ def divide_files(paths: dict, max_size):  # Max size is in bits
 
 # Read done file
 done = []
-done_file = Path(script_dir, "done.txt")
-if not done_file.is_file():
-    done_file.touch()
-else:
-    with open(done_file) as f:
-        done = [line.rstrip() for line in f]
+if not args.no_write:
+    done_file = Path(script_dir, "done.txt")
+    if not done_file.is_file():
+        done_file.touch()
+    else:
+        with open(done_file) as f:
+            done = [line.rstrip() for line in f]
 
 # Counter for all the files being processed. Used for logging purposes.
 total_files_count = multiprocessing.Value("i", 0)
@@ -533,13 +536,12 @@ def upload_folder(folder_path, proxy=False):
     logger.log(0, "Upload folder function called")
 
     if folder_path in done and not args.no_write:
-        logger.info(f"Skipping: {folder_path}")
+        logger.info("Skipping: %s", folder_path)
         return
-    else:
-        logger.info(f"Uploading {folder_path}")
+    logger.info("Uploading %s", folder_path)
 
     paths = find_files(folder_path, [".json", ])
-    logger.info(f"{folder_path}: Found {len(paths)} files")
+    logger.info("%s: Found %s files", folder_path, len(paths))
     total_files_count.value += len(paths)
     file_lists = divide_files(paths, 15000000000)
     folder_name = Path(folder_path).parts[-1]
@@ -552,7 +554,7 @@ def upload_folder(folder_path, proxy=False):
             "files": file_list
         })
 
-    logger.info(f"Uploading: {len(chunks)} chunks")
+    logger.info("Uploading: %s chunks", len(chunks))
     export_urls = upload_chunks(chunks, folder_name, proxy)
 
     done.append(folder_path)
@@ -564,7 +566,6 @@ def upload_folder(folder_path, proxy=False):
 
 
 proxies_store = multiprocessing.Queue()  # Available proxies
-# proxies_store = multiprocessing.Manager().Queue()  # Available proxies
 
 if args.proxy:
     # If --proxy is passed load proxies from proxy file
@@ -575,16 +576,16 @@ if args.proxy:
     with open(proxy_file_path) as proxy_file:
         for proxy_line in proxy_file:
             prox = proxy_line.strip("\n")
-            logger.debug(f"Loaded: {prox}")
+            logger.debug("Loaded: %s", prox)
             proxies_store.put(prox)
-    logger.info(f"{proxies_store.qsize()} proxies loaded")
+    logger.info("%s proxies loaded", proxies_store.qsize())
 
 # No proxies run on 1 thread
 if proxies_store.qsize() == 0:
-    threads = 1
+    THREADS = 1
 else:
     # 1 thread for each proxy
-    threads = proxies_store.qsize()
+    THREADS = proxies_store.qsize()
 
 # Counter of all the active workers. Used for logging purposes.
 worker_count = multiprocessing.Value("i", 0)
@@ -593,35 +594,36 @@ worker_count = multiprocessing.Value("i", 0)
 def worker(folder_path):
     """"This is actually just a wrapper around
         upload_folder to handle the proxies"""
-    worker_count.value +=1  # Add to active worker counter. Used for logging purposes.
-    logger.debug(f"Worker spawned. Total workers: {worker_count.value}")
+    worker_count.value += 1  # Add to active worker counter. Used for logging purposes.
+    logger.debug("Worker spawned. Total workers: %s", worker_count.value)
 
     proxy = False
     if args.proxy:
         # Get proxy
         proxy = proxies_store.get()
-        logger.debug(f"Using proxy: {proxy}")
-        logger.debug(f"Proxies in store: {proxies_store.qsize()}")
+        logger.debug("Using proxy: %s", proxy)
+        logger.debug("Proxies in store: %s", proxies_store.qsize())
 
     exported_urls = upload_folder(folder_path, proxy)
-    logger.info(f"Done uploading: {folder_path}")
+    logger.info("Done uploading: %s", folder_path)
 
     if args.proxy:
         # Return proxy
         proxies_store.put(proxy)
-        logger.debug(f"Returning proxy: {proxy}")
-        logger.debug(f"Proxies in store: {proxies_store.qsize()}")
+        logger.debug("Returning proxy: %s", proxy)
+        logger.debug("Proxies in store: %s", proxies_store.qsize())
 
     worker_count.value -= 1  # Subtract to active worker counter. Used for logging purposes.
-    logger.debug(f"Worker finished. Total workers: {worker_count.value}")
+    logger.debug("Worker finished. Total workers: %s", worker_count.value)
 
     return {folder_path: exported_urls}
 
 
 # Create output file
-output_file = Path(script_dir, "out.txt")
-if not output_file.is_file():
-    output_file.touch()
+if not args.no_write:
+    output_file = Path(script_dir, "out.txt")
+    if not output_file.is_file():
+        output_file.touch()
 
 
 def urls_to_file(urls: list, folder_path):
@@ -633,28 +635,27 @@ def urls_to_file(urls: list, folder_path):
     with open(output_file, "a") as out_file:
         out_file.write(folder_path + linesep)
         for url in urls:
-            logger.debug(f"Writing to results file: {url}")
+            logger.debug("Writing to results file: %s", url)
             out_file.write(url + linesep)
         out_file.write(linesep)
 
 
-upload_queue = []  # To be downloaded
-
-
-def upload_manager():
+def upload_manager(queue):
     """"Starts upload process and processes results"""
     try:
-        with multiprocessing.Pool(processes=threads) as pool:  # todo: Find fix for windows exe
-            results = pool.map(worker, upload_queue)  # Map pool to upload queue
+        multiprocessing.freeze_support()  # todo: Does this do anything
+        with multiprocessing.Pool(processes=THREADS) as pool:  # todo: Find fix for windows exe
+            results = pool.map(worker, queue)  # Map pool to upload queue
     except Exception as e:
-        logger.error(e)
+        tb = sys.exc_info()[2]
+        logger.error(e.with_traceback(tb))
         return
 
     all_export_urls = {}
     for r in results:
         all_export_urls.update(r)
 
-    logger.info(f"Processed {total_files_count.value} files")
+    logger.info("Processed %s files", total_files_count.value)
 
     # Print results
     print()
@@ -671,14 +672,17 @@ def upload_manager():
     print()
 
 
+upload_queue = []  # To be downloaded
+
 # Upload sub dirs
 if args.upload_subdirs:
     logger.debug("Uploading sub-directories")
 
-    d_path = Path(args.upload_subdirs)
+    for folder in args.upload_subdirs:
+        d_path = Path(folder)
 
-    for sub_folder in listdir(d_path):  # Append target folders to upload list
-        upload_queue.append(Path(d_path, sub_folder))
+        for sub_folder in listdir(d_path):  # Append target folders to upload list
+            upload_queue.append(Path(d_path, sub_folder))
 
 # Upload multiple dirs
 elif args.upload_dirs:
@@ -688,14 +692,10 @@ elif args.upload_dirs:
         upload_queue.append(folder)
 
 if args.upload_dirs or args.upload_subdirs:
-    upload_manager()  # Start Upload process
-
-
-# #################################### End MEGAabuse ###################################################################
-# #################################### Keep alive ######################################################################
+    upload_manager(upload_queue)  # Start Upload process
 
 # Keeps accounts active
-if args.keep_alive:
+if args.keep_alive and not args.no_write:  # Does not run if --no-write has been passed
     logger.debug("Keeping accounts alive")
 
     with open(account_file) as account_f:
@@ -705,41 +705,9 @@ if args.keep_alive:
             usern, passwd = line.split(";")
 
             # Log in and log out using megacmd
-            logger.info(f"Logging into: {usern} {passwd}")
+            logger.info("Logging into: %s %s", usern, passwd)
             logout()
             login(usern, passwd)
             logout()
-
-
-# #################################### End keep alive ##################################################################
-# #################################### Url health check ################################################################
-
-# Check if url is not taken down
-if args.check_urls:
-    exports = []
-    e_urls = []
-
-    with open(output_file) as outp_file:
-        # Dividing outfile into list by blank line
-        for file_line in outp_file:
-            clean_line = file_line.strip("\n")
-
-            if file_line == "\n":
-                exports.append(e_urls)
-                e_urls = []
-            else:
-                e_urls.append(clean_line)
-
-    data_dict = {}
-    for export in exports:
-        # First line is folder path. All lines after that export urls
-        data_dict.update({export[0]: export[1:]})
-
-    for fn, el in data_dict.items():  # Folder path, export list; List containing exported urls
-        logger.info(f"Checking health of: {fn}")
-
-        for u in el:
-            logger.debug(f"Checking {u}")
-            # todo: check if url is up
 
 logger.info("Done")
