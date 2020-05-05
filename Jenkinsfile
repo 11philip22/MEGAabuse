@@ -13,7 +13,7 @@ node("master") {
         }
 
         stage("Pylint") {
-            sh 'pylint --disable=W1202 --output-format=parseable --reports=no module > pylint.log || echo "pylint exited with $?")'
+            sh 'pylint --disable=W1202 --output-format=parseable --reports=no module > pylint.log || echo "pylint exited with $?"'
             sh 'cat render/pylint.log'
 
             step([
@@ -22,7 +22,7 @@ node("master") {
                                                           parserName: 'PYLint',
                                                           pattern   : 'pylint.log'
                                                   ]],
-                    unstableTotalAll           : '0',
+                    unstableTotalAll           : '0',   
                     usePreviousBuildAsReference: true
             ])
         }
