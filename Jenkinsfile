@@ -20,7 +20,7 @@ node("master") {
                     parserConfigurations       : [[
                                                           parserName: 'PYLint',
                                                           pattern   : 'pylint.log'
-                                                  ]],
+                                                 ]],
                     unstableTotalAll           : '0',   
                     usePreviousBuildAsReference: true
             ])
@@ -59,7 +59,7 @@ node("master") {
 
     finally {
         stage('Clean Workspace') {
-            cleanWs()
+            // cleanWs()
         }
     }
 }
