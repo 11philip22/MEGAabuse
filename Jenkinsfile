@@ -13,7 +13,7 @@ node("master") {
         }
 
         stage("Pylint") {
-            sh 'pylint --disable=W1202 --output-format=parseable --reports=no module > pylint.log || echo "pylint exited with $?"'
+            sh 'pylint --disable=W1202 --output-format=parseable --reports=no MEGAabuse.py > pylint.log || echo "pylint exited with $?"'
 
             step([
                     $class                     : 'WarningsPublisher',
@@ -59,7 +59,7 @@ node("master") {
 
     finally {
         stage('Clean Workspace') {
-            // cleanWs()
+            cleanWs()
         }
     }
 }
