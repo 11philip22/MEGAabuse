@@ -60,9 +60,9 @@ node ('master') {
         stage ("Upload packages") {
             sh 'mkdir MEGAabuse'
 
-            sh 'tar -zcvf MEGAabuse/windows.tar.gzip windows'
-            sh 'tar -zcvf MEGAabuse/linux.tar.gzip linux'
-            sh 'tar -zcvf MEGAabuse/mac.tar.gzip mac'
+            sh 'tar -zcvf MEGAabuse/windows.tar.gz windows'
+            sh 'tar -zcvf MEGAabuse/linux.tar.gz linux'
+            sh 'tar -zcvf MEGAabuse/mac.tar.gz mac'
 
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
@@ -81,7 +81,7 @@ node ('master') {
 
     finally {
         stage ('Clean Workspace') {
-            // cleanWs()
+            cleanWs()
         }
     }
 }

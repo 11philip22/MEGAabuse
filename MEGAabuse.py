@@ -646,7 +646,7 @@ def upload_manager(queue):
         multiprocessing.freeze_support()  # todo: Does this do anything
         with multiprocessing.Pool(processes=THREADS) as pool:  # todo: Find fix for windows exe
             results = pool.map(worker, queue)  # Map pool to upload queue
-    except Exception as e:
+    except RuntimeError as e:
         tb = sys.exc_info()[2]
         logger.error(e.with_traceback(tb))
         return
