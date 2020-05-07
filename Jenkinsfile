@@ -1,6 +1,8 @@
 node ('master') {
     try {
         stage ('checkout scm') {
+            cleanWs()  // REMOVE
+
             checkout scm
         }
 
@@ -55,6 +57,7 @@ node ('master') {
                 },
             )
 
+            stash name: 'winStash', includes: 'windows'
         }
     }
 
@@ -70,8 +73,10 @@ node ('master') {
 
 node ('WindowsAgent') {
     try {
-        stage ("Create exe") {
-            powershell 'Write-Output "Hello, World!"'
+        stage ('Create exe') {
+            cleanWs()  // REMOVE
+
+            unstash name: 'winStash'
         }
     }
 
@@ -84,7 +89,7 @@ node ('WindowsAgent') {
 
     finally {
         stage ('Clean Workspace') {
-            cleanWs()
+            // cleanWs()
         }
     }
 }
@@ -101,7 +106,7 @@ node ('master') {
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            sh 'python MEGAabuse.py -d abuse'
+            // sh 'python MEGAabuse.py -d abuse'
             archiveArtifacts 'out.txt'
         }
     }
@@ -115,7 +120,7 @@ node ('master') {
 
     finally {
         stage ('Clean Workspace') {
-            cleanWs()
+            // cleanWs()
         }
     }
 
