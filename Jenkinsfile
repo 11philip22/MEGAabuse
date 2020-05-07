@@ -16,14 +16,8 @@ node ('master') {
             def baseDir = System.getProperty("user.dir");
             docker.image('hadolint/hadolint:latest-debian').withRun('-v ${baseDir}/Dockerfile:/Dockerfile') { c ->
                 docker.image('hadolint/hadolint:latest-debian').inside() {
-                    steps {
-                        sh 'hadolint Dockerfile | tee -a hadolint_lint.txt'
-                    }  
-                    post {
-                        always {
-                            archiveArtifacts 'hadolint_lint.txt'
-                        }
-                    }
+                    sh 'hadolint Dockerfile | tee -a hadolint_lint.txt'
+                    archiveArtifacts 'hadolint_lint.txt'
                 }
             }
         }
