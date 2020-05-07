@@ -15,8 +15,15 @@ node ('master') {
         stage ('lint dockerfile') {
             docker.image('hadolint/hadolint:latest-debian').withRun('-v ./Dockerfile:/Dockerfile') { c ->
                 docker.image('hadolint/hadolint:latest-debian').inside() {
-                    sh 'hadolint Dockerfile | tee -a hadolint_lint.txt'
-                    archiveArtifacts 'hadolint_lint.txt'
+                    steps {
+                        sh 'hadolint Dockerfile | tee -a hadolint_lint.txt'
+                    }  
+                    post {
+                        always {
+                            archiveArtifacts 'hadolint_lint.txt'
+                        }
+                    }
+                }
             }
         }
 
@@ -35,22 +42,25 @@ node ('master') {
         }
 
         stage ('Create packages') {
-            sh 'mkdir -p {windows,linux,mac}/binaries'
-            sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
-            parallel (
-                windows: {
-                    sh 'cp -r binaries/megacmd_windows windows/binaries/'
-                    sh 'cp -r binaries/megatools_win windows/binaries/'
-                },
-                linux: {
-                    sh 'cp -r binaries/megacmd_linux linux/binaries/'
-                    sh 'cp -r binaries/megatools_linux linux/binaries/'
-                },
-                mac: {
-                    sh 'cp -r binaries/megacmd_mac mac/binaries/'
-                    sh 'cp -r binaries/megatools_mac mac/binaries/'
-                }
-            )
+            steps {
+                sh 'mkdir -p {windows,linux,mac}/binaries'
+                sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
+            }
+                parallel (
+                    windows: {
+                        sh 'cp -r binaries/megacmd_windows windows/binaries/'
+                        sh 'cp -r binaries/megatools_win windows/binaries/'
+                    },
+                    linux: {
+                        sh 'cp -r binaries/megacmd_linux linux/binaries/'
+                        sh 'cp -r binaries/megatools_linux linux/binaries/'
+                    },
+                    mac: {
+                        sh 'cp -r binaries/megacmd_mac mac/binaries/'
+                        sh 'cp -r binaries/megatools_mac mac/binaries/'
+                    },
+                )
+            
         }
     }
 
