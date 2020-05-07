@@ -273,8 +273,14 @@ else:
     print("OS not supported")
     sys.exit(1)
 
+if not megatools_path.is_file():
+    raise FileNotFoundError("No megatools found!")
+
 # Start MEGA cmd server
 if sys.platform == "linux" or sys.platform == "win32":
+    if not cmd_server_path.is_dir():
+        raise FileNotFoundError("No megacmd found!")
+
     mcmd_p = subprocess.Popen(
         str(cmd_server_path),
         shell=True,
