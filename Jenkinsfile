@@ -58,11 +58,11 @@ node ('master') {
         }
 
         stage ("Upload packages") {
-            sh 'mkdir MEGAabuse'
+            sh 'mkdir abuse'
 
-            sh 'tar -zcvf MEGAabuse/windows.tar.gz windows'
-            sh 'tar -zcvf MEGAabuse/linux.tar.gz linux'
-            sh 'tar -zcvf MEGAabuse/mac.tar.gz mac'
+            sh 'tar -zcvf abuse/windows.tar.gz windows'
+            sh 'tar -zcvf abuse/linux.tar.gz linux'
+            sh 'tar -zcvf abuse/mac.tar.gz mac'
 
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
