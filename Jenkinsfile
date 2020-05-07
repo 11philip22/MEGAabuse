@@ -55,13 +55,19 @@ node ('master') {
                 },
             )
 
-            sh 'tar -zcvf windows.tar.gzip windows'
-            sh 'tar -zcvf linux.tar.gzip linux'
-            sh 'tar -zcvf mac.tar.gzip mac'
+        }
+
+        stage ("Upload packages") {
+            sh 'mkdir toUpload'
+
+            sh 'tar -zcvf toUpload/windows.tar.gzip windows'
+            sh 'tar -zcvf toUpload/linux.tar.gzip linux'
+            sh 'tar -zcvf toUpload/mac.tar.gzip mac'
 
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
-            sh 'python MEGAabuse.py -d windows linux mac'
+            
+            sh 'python MEGAabuse.py -d toUpload'
             archiveArtifacts 'done.txt'
         }
     }
