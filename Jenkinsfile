@@ -67,7 +67,7 @@ node ('master') {
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            sh 'python MEGAabuse.py -d MEGAabuse'
+            sh 'python MEGAabuse.py -d abuse'
             archiveArtifacts 'out.txt'
         }
     }
