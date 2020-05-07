@@ -58,17 +58,17 @@ node ('master') {
         }
 
         stage ("Upload packages") {
-            sh 'mkdir toUpload'
+            sh 'mkdir MEGAabuse'
 
-            sh 'tar -zcvf toUpload/windows.tar.gzip windows'
-            sh 'tar -zcvf toUpload/linux.tar.gzip linux'
-            sh 'tar -zcvf toUpload/mac.tar.gzip mac'
+            sh 'tar -zcvf MEGAabuse/windows.tar.gzip windows'
+            sh 'tar -zcvf MEGAabuse/linux.tar.gzip linux'
+            sh 'tar -zcvf MEGAabuse/mac.tar.gzip mac'
 
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            sh 'python MEGAabuse.py -d toUpload'
-            archiveArtifacts 'done.txt'
+            sh 'python MEGAabuse.py -d MEGAabuse'
+            archiveArtifacts 'out.txt'
         }
     }
 
