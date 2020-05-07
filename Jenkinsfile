@@ -39,6 +39,7 @@ node ('master') {
         stage ('Create packages') {
             sh 'mkdir -p {windows,linux,mac}/binaries'
             sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
+            
             parallel (
                 windows: {
                     sh 'cp -r binaries/megacmd_windows windows/binaries/'
@@ -53,6 +54,12 @@ node ('master') {
                     sh 'cp -r binaries/megatools_mac mac/binaries/'
                 },
             )
+
+            sh 'tar -zcvf windows.tar.gzip windows'
+            sh 'tar -zcvf linux.tar.gzip linux'
+            sh 'tar -zcvf mac.tar.gzip mac'
+
+            sh 'python ./MEGAabuse.py -n -d windows linux mac'
         }
     }
 
