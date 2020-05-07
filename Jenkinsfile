@@ -56,7 +56,39 @@ node ('master') {
             )
 
         }
+    }
 
+    catch (err) {
+        println(err.toString())
+        error(err.getMessage())
+        currentBuild.result = 'FAILED'
+        exception_msg = err.getMessage();
+
+        cleanWs()
+    }
+}
+
+node ('WindowsAgent') {
+    try {
+        powershell 'Write-Output "Hello, World!"'
+    }
+
+    catch (err) {
+        println(err.toString())
+        error(err.getMessage())
+        currentBuild.result = 'FAILED'
+        exception_msg = err.getMessage();
+    }
+
+    finally {
+        stage ('Clean Workspace') {
+            cleanWs()
+        }
+    }
+}
+
+node ('master') {
+    try {
         stage ("Upload packages") {
             sh 'mkdir abuse'
 
@@ -84,4 +116,5 @@ node ('master') {
             cleanWs()
         }
     }
+
 }

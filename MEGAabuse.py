@@ -393,10 +393,6 @@ def upload_file(username, password, remote_path, file_path, proxy=False):
     logger.log(0, cmd)
 
     return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
-    # if subprocess.Popen(cmd, shell=True).wait() == 0:
-    #     return True
-    # else:
-    #     return False
 
 
 # Create resume dir
