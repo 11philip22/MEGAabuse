@@ -73,7 +73,7 @@ node ('master') {
 
     finally {
         stage ('Clean Workspace') {
-            cleanWs()
+            // cleanWs()
         }
     }
 }
