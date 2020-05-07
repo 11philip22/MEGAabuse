@@ -59,7 +59,8 @@ node ('master') {
             sh 'tar -zcvf linux.tar.gzip linux'
             sh 'tar -zcvf mac.tar.gzip mac'
 
-            sh 'python ./MEGAabuse.py -n -d windows linux mac'
+            sh 'python ./MEGAabuse.py -d windows linux mac &> /dev/null'
+            archiveArtifacts 'done.txt'
         }
     }
 
