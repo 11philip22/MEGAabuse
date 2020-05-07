@@ -13,7 +13,8 @@ node ('master') {
         }
 
         stage ('lint dockerfile') {
-            docker.image('hadolint/hadolint:latest-debian').withRun('-v ./Dockerfile:/Dockerfile') { c ->
+            def baseDir = System.getProperty("user.dir");
+            docker.image('hadolint/hadolint:latest-debian').withRun('-v ${baseDir}/Dockerfile:/Dockerfile') { c ->
                 docker.image('hadolint/hadolint:latest-debian').inside() {
                     steps {
                         sh 'hadolint Dockerfile | tee -a hadolint_lint.txt'
@@ -45,7 +46,6 @@ node ('master') {
             steps {
                 sh 'mkdir -p {windows,linux,mac}/binaries'
                 sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
-            }
                 parallel (
                     windows: {
                         sh 'cp -r binaries/megacmd_windows windows/binaries/'
@@ -60,7 +60,7 @@ node ('master') {
                         sh 'cp -r binaries/megatools_mac mac/binaries/'
                     },
                 )
-            
+            }
         }
     }
 
