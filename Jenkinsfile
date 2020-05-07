@@ -37,24 +37,22 @@ node ('master') {
         }
 
         stage ('Create packages') {
-            steps {
-                sh 'mkdir -p {windows,linux,mac}/binaries'
-                sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
-                parallel (
-                    windows: {
-                        sh 'cp -r binaries/megacmd_windows windows/binaries/'
-                        sh 'cp -r binaries/megatools_win windows/binaries/'
-                    },
-                    linux: {
-                        sh 'cp -r binaries/megacmd_linux linux/binaries/'
-                        sh 'cp -r binaries/megatools_linux linux/binaries/'
-                    },
-                    mac: {
-                        sh 'cp -r binaries/megacmd_mac mac/binaries/'
-                        sh 'cp -r binaries/megatools_mac mac/binaries/'
-                    },
-                )
-            }
+            sh 'mkdir -p {windows,linux,mac}/binaries'
+            sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
+            parallel (
+                windows: {
+                    sh 'cp -r binaries/megacmd_windows windows/binaries/'
+                    sh 'cp -r binaries/megatools_win windows/binaries/'
+                },
+                linux: {
+                    sh 'cp -r binaries/megacmd_linux linux/binaries/'
+                    sh 'cp -r binaries/megatools_linux linux/binaries/'
+                },
+                mac: {
+                    sh 'cp -r binaries/megacmd_mac mac/binaries/'
+                    sh 'cp -r binaries/megatools_mac mac/binaries/'
+                },
+            )
         }
     }
 
