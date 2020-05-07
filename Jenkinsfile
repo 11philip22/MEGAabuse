@@ -70,7 +70,9 @@ node ('master') {
 
 node ('WindowsAgent') {
     try {
-        powershell 'Write-Output "Hello, World!"'
+        stage ("Create exe") {
+            powershell 'Write-Output "Hello, World!"'
+        }
     }
 
     catch (err) {
