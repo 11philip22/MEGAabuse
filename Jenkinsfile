@@ -59,6 +59,8 @@ node ('master') {
             sh 'tar -zcvf linux.tar.gzip linux'
             sh 'tar -zcvf mac.tar.gzip mac'
 
+            sh 'chmod +x binaries/megatools_linux/megatools'
+            sh 'chmod +x binaries/megacmd_linux/*'
             sh 'python MEGAabuse.py -d windows linux mac'
             archiveArtifacts 'done.txt'
         }
