@@ -101,11 +101,11 @@ parser.add_argument(
     help="Use socks5 proxies defined in proxy.txt"
 )
 
-args = parser.parse_args()
+script_args = parser.parse_args()
 # Exit if help argument has been passed.
 # To prevent writing empty log files
 try:
-    if args.h:
+    if script_args.h:
         sys.exit(0)
 except AttributeError:
     # -h or --help has not been passed continue
@@ -116,7 +116,7 @@ logger = logging.getLogger('MEGAabuse')
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-if not args.no_write:  # Dont bother with log files if --no-write is passed
+if not script_args.no_write:  # Dont bother with log files if --no-write is passed
     # Create logs folder
     log_dir = Path(script_dir, "logs")
     if not log_dir.is_dir():
@@ -138,7 +138,7 @@ if not args.no_write:  # Dont bother with log files if --no-write is passed
     log_file.touch()
 
     fh = logging.FileHandler(str(log_file))
-    if args.vvv:  # Enable super verbose output
+    if script_args.vvv:  # Enable super verbose output
         fh.setLevel(logging.NOTSET)
     else:
         fh.setLevel(logging.DEBUG)
@@ -146,11 +146,11 @@ if not args.no_write:  # Dont bother with log files if --no-write is passed
     logger.addHandler(fh)
 
 ch = logging.StreamHandler()
-if args.vv:  # Enable debug mode
+if script_args.vv:  # Enable debug mode
     ch.setLevel(logging.DEBUG)
-elif args.v:  # Enable console log output
+elif script_args.v:  # Enable console log output
     ch.setLevel(logging.INFO)
-elif args.vvv:  # Enable super verbose output
+elif script_args.vvv:  # Enable super verbose output
     ch.setLevel(logging.NOTSET)
 else:
     ch.setLevel(logging.ERROR)
@@ -158,11 +158,80 @@ else:
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-if args.keep_alive and args.no_write:  # These two options are not compatible and keep_alive will not run
+if script_args.keep_alive and script_args.no_write:  # These two options are not compatible and keep_alive will not run
     logger.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
 
+# #################################### Begin mac os workaround #########################################################
+# Found selution for macos not implemented error here: https://github.com/keras-team/autokeras/issues/368
+
+
+# class SharedCounter:
+#     """ A synchronized shared counter.
+#
+#     The locking done by multiprocessing.Value ensures that only a single
+#     process or thread may read or write the in-memory ctypes object. However,
+#     in order to do n += 1, Python performs a read followed by a write, so a
+#     second process may read the old value before the new one is written by the
+#     first process. The solution is to use a multiprocessing.Lock to guarantee
+#     the atomicity of the modifications to Value.
+#
+#     This class comes almost entirely from Eli Bendersky's blog:
+#     http://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing/
+#
+#     """
+#
+#     def __init__(self, val=0):
+#         self.count = multiprocessing.Value('i', val)
+#
+#     def increment(self, incr=1):
+#         """ Increment the counter by n (default = 1) """
+#         with self.count.get_lock():
+#             self.count.value += incr
+#
+#     @property
+#     def value(self):
+#         """ Return the value of the counter """
+#         return self.count.value
+#
+#
+# class Queue(multiprocessing.Queue):
+#     """ A portable implementation of multiprocessing.Queue.
+#
+#     Because of multithreading / multiprocessing semantics, Queue.qsize() may
+#     raise the NotImplementedError exception on Unix platforms like Mac OS X
+#     where sem_getvalue() is not implemented. This subclass addresses this
+#     problem by using a synchronized shared counter (initialized to zero) and
+#     increasing / decreasing its value every time the put() and get() methods
+#     are called, respectively. This not only prevents NotImplementedError from
+#     being raised, but also allows us to implement a reliable version of both
+#     qsize() and empty().
+#
+#     """
+#
+#     def __init__(self, *args, **kwargs):
+#         super(Queue, self).__init__(*args, **kwargs)
+#         self.size = SharedCounter(0)
+#
+#     def put(self, *args, **kwargs):
+#         self.size.increment(1)
+#         super(Queue, self).put(*args, **kwargs)
+#
+#     def get(self, *args, **kwargs):
+#         self.size.increment(-1)
+#         return super(Queue, self).get(*args, **kwargs)
+#
+#     def qsize(self):
+#         """ Reliable implementation of multiprocessing.Queue.qsize() """
+#         return self.size.value
+#
+#     def empty(self):
+#         """ Reliable implementation of multiprocessing.Queue.empty() """
+#         return not self.qsize()
+
+
+# #################################### End mac os workaround ###########################################################
 # #################################### Begin account creator ###########################################################
-c = 0  # Total accounts created
+ac = 0  # Total accounts created
 
 
 def random_text(length):
@@ -205,7 +274,7 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
     confirm_commands = []
     name = get_first_name()
     n = accounts_number
-    global c
+    global ac
 
     # Register a bulk of size n
     logger.info("Registering accounts")
@@ -245,9 +314,9 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
     for command in confirm_commands:
         subprocess.check_output(command, shell=True)
 
-    c += accounts_number
+    ac += accounts_number
     logger.info(
-        "Bulk done. Generated %s accounts in %ss. Currently: %s", accounts_number, round(time.time() - start, 1), c)
+        "Bulk done. Generated %s accounts in %ss. Currently: %s", accounts_number, round(time.time() - start, 1), ac)
     return email_pass_pairs
 
 
@@ -278,7 +347,7 @@ if not megatools_path.is_file():
 
 # Start MEGA cmd server
 if sys.platform == "linux" or sys.platform == "win32":
-    if not cmd_server_path.is_dir():
+    if not cmd_server_path.is_file():
         raise FileNotFoundError("No megacmd found!")
 
     mcmd_p = subprocess.Popen(
@@ -296,7 +365,7 @@ if sys.platform == "linux" or sys.platform == "win32":
     atexit.register(exit_handler)
 
 # Create accounts.txt
-if not args.no_write:
+if not script_args.no_write:
     account_file = Path(script_dir, "accounts.txt")
     if not account_file.is_file():
         account_file.touch()
@@ -311,7 +380,7 @@ def get_account(amount, proxy=False):
     with a_lock:
         accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg", proxy)
     # Write credentials to file
-    if not args.no_write:
+    if not script_args.no_write:
         with open(account_file, "a") as file:
             for user, password in accounts.items():
                 file.write(f"{user};{password}" + linesep)
@@ -402,7 +471,7 @@ def upload_file(username, password, remote_path, file_path, proxy=False):
 
 
 # Create resume dir
-if not args.no_write:
+if not script_args.no_write:
     resume_dir = Path(script_dir, "resume")
     if not resume_dir.is_dir():
         resume_dir.mkdir()
@@ -413,10 +482,10 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
     logger.log(0, "Upload chunks function called")
 
     resume_data = []
-    if not args.no_write:
+    if not script_args.no_write:
         # Create resume file
         resume_file = Path(resume_dir, f"{dir_name}.json")
-        if not resume_file.is_file() and not args.no_write:
+        if not resume_file.is_file() and not script_args.no_write:
             resume_file.touch()
 
         # Try to load data from resume file if fails create empty resume data var
@@ -467,7 +536,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
                     # Update resume data
                     uploaded_files.append(file)
-                    if not args.no_write:
+                    if not script_args.no_write:
                         update_json_file(resume_file, resume_data)
                 else:
                     logger.error("Error uploading: %s", file)
@@ -481,7 +550,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
         # Write export url to resume file
         resume_data[c_counter].update({"export url": export_url})
-        if not args.no_write:
+        if not script_args.no_write:
             update_json_file(resume_file, resume_data)
 
         c_counter += 1
@@ -521,7 +590,7 @@ def divide_files(paths: dict, max_size):  # Max size is in bits
 
 # Read done file
 done = []
-if not args.no_write:
+if not script_args.no_write:
     done_file = Path(script_dir, "done.txt")
     if not done_file.is_file():
         done_file.touch()
@@ -537,9 +606,9 @@ def upload_folder(folder_path, proxy=False):
     """"Uploads a folder to mega.nz returns download urls"""
     logger.log(0, "Upload folder function called")
 
-    if folder_path in done and not args.no_write:
+    if folder_path in done and not script_args.no_write:
         logger.info("Skipping: %s", folder_path)
-        return
+        return []
     logger.info("Uploading %s", folder_path)
 
     paths = find_files(folder_path, [".json", ])
@@ -560,7 +629,7 @@ def upload_folder(folder_path, proxy=False):
     export_urls = upload_chunks(chunks, folder_name, proxy)
 
     done.append(folder_path)
-    if not args.no_write:
+    if not script_args.no_write:
         with open(done_file, "a") as file:
             file.write(folder_path + linesep)
 
@@ -569,7 +638,7 @@ def upload_folder(folder_path, proxy=False):
 
 proxies_store = multiprocessing.Queue()  # Available proxies
 
-if args.proxy:
+if script_args.proxy:
     # If --proxy is passed load proxies from proxy file
     proxy_file_path = Path(script_dir, "proxies.txt")
     if not proxy_file_path.is_file():
@@ -600,7 +669,7 @@ def worker(folder_path):
     logger.debug("Worker spawned. Total workers: %s", worker_count.value)
 
     proxy = False
-    if args.proxy:
+    if script_args.proxy:
         # Get proxy
         proxy = proxies_store.get()
         logger.debug("Using proxy: %s", proxy)
@@ -609,7 +678,7 @@ def worker(folder_path):
     exported_urls = upload_folder(folder_path, proxy)
     logger.info("Done uploading: %s", folder_path)
 
-    if args.proxy:
+    if script_args.proxy:
         # Return proxy
         proxies_store.put(proxy)
         logger.debug("Returning proxy: %s", proxy)
@@ -622,7 +691,7 @@ def worker(folder_path):
 
 
 # Create output file
-if not args.no_write:
+if not script_args.no_write:
     output_file = Path(script_dir, "out.txt")
     if not output_file.is_file():
         output_file.touch()
@@ -648,56 +717,56 @@ def upload_manager(queue):
         multiprocessing.freeze_support()  # todo: Does this do anything
         with multiprocessing.Pool(processes=THREADS) as pool:  # todo: Find fix for windows exe
             results = pool.map(worker, queue)  # Map pool to upload queue
-    except RuntimeError as e:
+    except RuntimeError as exc:
         tb = sys.exc_info()[2]
-        logger.error(e.with_traceback(tb))
+        logger.error(exc.with_traceback(tb))
         return
 
     all_export_urls = {}
-    for r in results:
-        all_export_urls.update(r)
+    for res in results:
+        all_export_urls.update(res)
 
     logger.info("Processed %s files", total_files_count.value)
 
     # Print results
     print()
     # Print folder path and export urls
-    for fp, r in all_export_urls.items():
+    for e_file_path, res in all_export_urls.items():
         # Write to file
-        if not args.no_write:
-            urls_to_file(r, fp)
+        if not script_args.no_write:
+            urls_to_file(res, e_file_path)
         # Print folder path
-        print(linesep + fp)
-        for e in r:
+        print(linesep + e_file_path)
+        for e_url in res:
             # Print export url
-            print(e)
+            print(e_url)
     print()
 
 
 upload_queue = []  # To be downloaded
 
 # Upload sub dirs
-if args.upload_subdirs:
+if script_args.upload_subdirs:
     logger.debug("Uploading sub-directories")
 
-    for folder in args.upload_subdirs:
+    for folder in script_args.upload_subdirs:
         d_path = Path(folder)
 
         for sub_folder in listdir(d_path):  # Append target folders to upload list
             upload_queue.append(Path(d_path, sub_folder))
 
 # Upload multiple dirs
-elif args.upload_dirs:
+elif script_args.upload_dirs:
     logger.debug("Uploading multiple directories")
 
-    for folder in args.upload_dirs:  # Append target folders to upload list
+    for folder in script_args.upload_dirs:  # Append target folders to upload list
         upload_queue.append(folder)
 
-if args.upload_dirs or args.upload_subdirs:
+if script_args.upload_dirs or script_args.upload_subdirs:
     upload_manager(upload_queue)  # Start Upload process
 
 # Keeps accounts active
-if args.keep_alive and not args.no_write:  # Does not run if --no-write has been passed
+if script_args.keep_alive and not script_args.no_write:  # Does not run if --no-write has been passed
     logger.debug("Keeping accounts alive")
 
     with open(account_file) as account_f:
