@@ -74,7 +74,7 @@ node ('master') {
 parallel (
     runWebServer: {
         node ('master') {
-            sh 
+            sh 'ls'
         }
     },
     buildExe: {    
@@ -82,7 +82,7 @@ parallel (
             try {
                 stage ('Create exe') {
                     // cleanWs()  // REMOVE
-
+                    powershell 'dir'
                     // unstash name: "winStash"
                 }
             }
