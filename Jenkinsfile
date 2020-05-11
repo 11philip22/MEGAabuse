@@ -71,28 +71,28 @@ node ('master') {
     }
 }
 
-node ('WindowsAgent') {
-    try {
-        stage ('Create exe') {
-            cleanWs()  // REMOVE
+// node ('WindowsAgent') {
+//     try {
+//         stage ('Create exe') {
+//             // cleanWs()  // REMOVE
 
-            unstash name: "winStash"
-        }
-    }
+//             // unstash name: "winStash"
+//         }
+//     }
 
-    catch (err) {
-        println(err.toString())
-        error(err.getMessage())
-        currentBuild.result = 'FAILED'
-        exception_msg = err.getMessage();
-    }
+//     catch (err) {
+//         println(err.toString())
+//         error(err.getMessage())
+//         currentBuild.result = 'FAILED'
+//         exception_msg = err.getMessage();
+//     }
 
-    finally {
-        stage ('Clean Workspace') {
-            // cleanWs()
-        }
-    }
-}
+//     finally {
+//         stage ('Clean Workspace') {
+//             // cleanWs()
+//         }
+//     }
+// }
 
 node ('master') {
     try {
@@ -120,7 +120,7 @@ node ('master') {
 
     finally {
         stage ('Clean Workspace') {
-            // cleanWs()
+            cleanWs()
         }
     }
 
