@@ -36,8 +36,6 @@ node ('master') {
                     unstableTotalAll           : '0',   
                     usePreviousBuildAsReference: true
             ])
-
-            archiveArtifacts 'pylint.log'
         }
 
         stage ('Create packages') {
@@ -58,6 +56,8 @@ node ('master') {
                     sh 'cp -r binaries/megatools_mac mac/binaries/'
                 },
             )
+
+            stash name: "winStash", includes: "windows"
         }
     }
 
@@ -71,28 +71,28 @@ node ('master') {
     }
 }
 
-// node ('WindowsAgent') {
-//     try {
-//         stage ('Create exe') {
-//             // cleanWs()  // REMOVE
+node ('WindowsAgent') {
+    try {
+        stage ('Create exe') {
+            // cleanWs()  // REMOVE
 
-//             // unstash name: "winStash"
-//         }
-//     }
+            // unstash name: "winStash"
+        }
+    }
 
-//     catch (err) {
-//         println(err.toString())
-//         error(err.getMessage())
-//         currentBuild.result = 'FAILED'
-//         exception_msg = err.getMessage();
-//     }
+    catch (err) {
+        println(err.toString())
+        error(err.getMessage())
+        currentBuild.result = 'FAILED'
+        exception_msg = err.getMessage();
+    }
 
-//     finally {
-//         stage ('Clean Workspace') {
-//             // cleanWs()
-//         }
-//     }
-// }
+    finally {
+        stage ('Clean Workspace') {
+            cleanWs()
+        }
+    }
+}
 
 node ('master') {
     try {
@@ -106,8 +106,14 @@ node ('master') {
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            // sh 'python MEGAabuse.py -d abuse'
-            archiveArtifacts 'out.txt'
+            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Yes', 
+                                    parameters: [booleanParam(defaultValue: true, 
+                                    description: 'Upload to mega.nz',name: 'Yes?')])
+            if (uploadBuild) {
+                sh 'python MEGAabuse.py -d abuse'
+                archiveArtifacts 'out.txt'
+            }
+
         }
     }
 
