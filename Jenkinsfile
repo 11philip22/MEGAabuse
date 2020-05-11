@@ -71,28 +71,37 @@ node ('master') {
     }
 }
 
-node ('WindowsAgent') {
-    try {
-        stage ('Create exe') {
-            // cleanWs()  // REMOVE
-
-            // unstash name: "winStash"
+parallel (
+    runWebServer: {
+        node ('master') {
+            sh 
         }
-    }
+    },
+    buildExe: {    
+        node ('WindowsAgent') {
+            try {
+                stage ('Create exe') {
+                    // cleanWs()  // REMOVE
 
-    catch (err) {
-        println(err.toString())
-        error(err.getMessage())
-        currentBuild.result = 'FAILED'
-        exception_msg = err.getMessage();
-    }
+                    // unstash name: "winStash"
+                }
+            }
 
-    finally {
-        stage ('Clean Workspace') {
-            cleanWs()
+            catch (err) {
+                println(err.toString())
+                error(err.getMessage())
+                currentBuild.result = 'FAILED'
+                exception_msg = err.getMessage();
+            }
+
+            finally {
+                stage ('Clean Workspace') {
+                    cleanWs()
+                }
+            }
         }
-    }
-}
+    },
+)
 
 node ('master') {
     try {
