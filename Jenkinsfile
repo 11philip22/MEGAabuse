@@ -36,6 +36,8 @@ node ('master') {
                     unstableTotalAll           : '0',   
                     usePreviousBuildAsReference: true
             ])
+
+            archiveArtifacts 'pylint.log'
         }
 
         stage ('Create packages') {
@@ -56,8 +58,6 @@ node ('master') {
                     sh 'cp -r binaries/megatools_mac mac/binaries/'
                 },
             )
-
-            stash name: "winStash", includes: "windows"
         }
     }
 
