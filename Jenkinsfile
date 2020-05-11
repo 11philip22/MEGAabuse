@@ -106,14 +106,13 @@ node ('master') {
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Yes',
-                                    parameters: [booleanParam(defaultValue: true,
-                                    description: 'Upload to mega.nz',name: 'Yes?')])
+            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Continue',
+                                    parameters: [booleanParam(defaultValue: False,
+                                    description: 'Check yes to upload to mega.nz',name: 'Yes')])
             if (uploadBuild) {
                 sh 'python MEGAabuse.py -d abuse'
                 archiveArtifacts 'out.txt'
             }
-
         }
     }
 
