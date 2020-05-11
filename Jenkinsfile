@@ -36,6 +36,8 @@ node ('master') {
                     unstableTotalAll           : '0',   
                     usePreviousBuildAsReference: true
             ])
+
+            archiveArtifacts 'pylint.log'
         }
 
         stage ('Create packages') {
@@ -56,8 +58,6 @@ node ('master') {
                     sh 'cp -r binaries/megatools_mac mac/binaries/'
                 },
             )
-
-            stash name: "winStash", includes: "windows"
         }
     }
 
@@ -106,8 +106,8 @@ node ('master') {
             sh 'chmod +x binaries/megatools_linux/megatools'
             sh 'chmod +x binaries/megacmd_linux/*'
             
-            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Yes', 
-                                    parameters: [booleanParam(defaultValue: true, 
+            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Yes',
+                                    parameters: [booleanParam(defaultValue: true,
                                     description: 'Upload to mega.nz',name: 'Yes?')])
             if (uploadBuild) {
                 sh 'python MEGAabuse.py -d abuse'
