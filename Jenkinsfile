@@ -1,34 +1,38 @@
 parallel (
     windows: {
-        try {
-             stage ('checkout scm') {
-                checkout scm
-            }           
-        }
-        
-        catch {
-            println(err.toString())
-            error(err.getMessage())
-            currentBuild.result = 'FAILED'
+        node ('WindowsAgent') {
+            try {
+                 stage ('checkout scm') {
+                    checkout scm
+                }           
+            }
+            
+            catch {
+                println(err.toString())
+                error(err.getMessage())
+                currentBuild.result = 'FAILED'
 
-            // cleanWs()          
+                cleanWs()          
+            }
         }    
     },
     unix: {
-        try {
-             stage ('checkout scm') {
-                checkout scm
-            }            
-        }
-        
-        catch {
-            println(err.toString())
-            error(err.getMessage())
-            currentBuild.result = 'FAILED'
+        node ('master') {
+            try {
+                 stage ('checkout scm') {
+                    checkout scm
+                }            
+            }
+            
+            catch {
+                println(err.toString())
+                error(err.getMessage())
+                currentBuild.result = 'FAILED'
 
-            // cleanWs()          
-        }    
-    },
+                cleanWs()          
+            }    
+        }
+    },  
 )
 
 node ('master') {
