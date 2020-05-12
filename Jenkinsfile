@@ -7,7 +7,7 @@ parallel (
                 }           
             }
             
-            catch {
+            catch() {
                 println(err.toString())
                 error(err.getMessage())
                 currentBuild.result = 'FAILED'
@@ -24,7 +24,7 @@ parallel (
                 }            
             }
             
-            catch {
+            catch() {
                 println(err.toString())
                 error(err.getMessage())
                 currentBuild.result = 'FAILED'
