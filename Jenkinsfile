@@ -80,8 +80,18 @@ prallel (
                 stage ('Create packages') {
                     powershell 'New-Item -ItemType Directory -Path ".\\windows"'
                     powershell 'Copy-Item -Path .\\requirements.txt,.\\MEGAabuse.py,.\\guerrillamail.py -Destination .\\windows'
-                    powershell ''
-                }                
+                    powershell 'python.exe .\\setup.py build_exe'
+                    powershell '''\
+                    $env:Path += ";C:\\Program Files\\WinRAR\\"
+                    rar a abuse.rar .\\build\\exe.win32-3.8
+                    '''
+                }
+
+                // stage ('Upload package') {
+                //     powershell 'New-Item -ItemType Directory -Path ".\\upload"'
+                //     powershell 'Move-Item .\\abuse.rar .\\upload\\'
+                //     powershell 'python.exe MEGAabuse.py -d .\\upload'
+                // }               
             }
 
             catch {
@@ -114,17 +124,20 @@ prallel (
                             sh 'cp -r binaries/megatools_mac mac/binaries/'
                         },
                     )
-                }
 
-                stage ('Upload packages') {
                     sh 'mkdir abuse'
 
                     sh 'tar -zcvf abuse/linux.tar.gz linux'
                     sh 'tar -zcvf abuse/mac.tar.gz mac'
-
-                    sh 'chmod +x binaries/megatools_linux/megatools'
-                    sh 'chmod +x binaries/megacmd_linux/*'
                 }
+
+                // stage ('Upload package') {
+                //     sh 'chmod +x binaries/megatools_linux/megatools'
+                //     sh 'chmod +x binaries/megacmd_linux/*'
+                //     sh 'python MEGAabuse.py -d abuse'
+                    
+                //     archiveArtifacts 'out.txt'
+                // }                    
             }
 
             catch {

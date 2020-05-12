@@ -235,95 +235,104 @@ class Queue(multiprocessing.queues.Queue):
 
 # #################################### End mac os workaround ###########################################################
 # #################################### Begin account creator ###########################################################
-ac = 0  # Total accounts created
 
 
-def random_text(length):
-    """"Returns a random string with specified length"""
-    return ''.join([choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(length)])
+class AccountFactory:
+    ac = 0  # Total accounts created
 
+    def __init__(self, tools_path):
+        self.megareg_dir = f"{tools_path} reg"
 
-def random_mail():
-    """"Returns a 30 character string"""
-    return ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(30)])
+    @staticmethod
+    def random_text(length):
+        """"Returns a random string with specified length"""
+        return ''.join(
+            [choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(length)])
 
+    @staticmethod
+    def random_mail():
+        """"Returns a 30 character string"""
+        return ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(30)])
 
-def guerrilla_wait_for_mail():
-    """"Wait for welcome mail"""
-    wait_time = 0
-    while True:
-        if wait_time > 120:
-            LOGGER.info("Waiting for mail time exceeded 2 minutes. Aborting")
-            return False
-        mail_str = str(guerrillamail.cli("list"))
-        if "welcome@mega.nz" in mail_str:
-            return mail_str
-        wait_time += 2
-        time.sleep(2)
+    @staticmethod
+    def guerrilla_wait_for_mail():
+        """"Wait for welcome mail"""
+        wait_time = 0
+        while True:
+            if wait_time > 120:
+                LOGGER.info("Waiting for mail time exceeded 2 minutes. Aborting")
+                return False
+            mail_str = str(guerrillamail.cli("list"))
+            if "welcome@mega.nz" in mail_str:
+                return mail_str
+            wait_time += 2
+            time.sleep(2)
 
+    @staticmethod
+    def extract_url(mail_str):
+        """"Extracts url from mail"""
+        soup = BeautifulSoup(mail_str, "html.parser")
+        for link in soup.findAll("a"):
+            if link.get("href") is not None and "#confirm" in link.get("href"):
+                return link.get("href").replace('3D"', "").replace('"', "")
+        return None
 
-def extract_url(mail_str):
-    """"Extracts url from mail"""
-    soup = BeautifulSoup(mail_str, "html.parser")
-    for link in soup.findAll("a"):
-        if link.get("href") is not None and "#confirm" in link.get("href"):
-            return link.get("href").replace('3D"', "").replace('"', "")
-    return None
+    def guerrilla_gen_bulk(self, accounts_number, fixed_pass, proxy):
+        """"Creates mega.nz accounts using guerrilla mail"""
+        start = time.time()
+        LOGGER.info("Starting a new bulk")
+        email_code_pairs = {}
+        email_pass_pairs = {}
+        confirm_commands = []
+        name = get_first_name()
+        n = accounts_number
 
+        # Register a bulk of size n
+        LOGGER.info("Registering accounts")
+        while n > 0:
+            email_text = self.random_mail()
+            # guerrillamail.cli("setaddr",email_text)
+            email = email_text + "@guerrillamailblock.com"
+            if fixed_pass:
+                email_password = fixed_pass
+            else:
+                email_password = self.random_text(21)
+            cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
+            if proxy:
+                cmd += f" --proxy={proxy}"
+            LOGGER.log(0, cmd)
+            confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
+            confirm_text = confirm_text[confirm_text.find("-"):]
+            email_code_pairs[email] = confirm_text
+            email_pass_pairs[email] = email_password
+            n -= 1
+        LOGGER.info("Done registering")
 
-def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
-    """"Creates mega.nz accounts using guerrilla mail"""
-    start = time.time()
-    LOGGER.info("Starting a new bulk")
-    email_code_pairs = {}
-    email_pass_pairs = {}
-    confirm_commands = []
-    name = get_first_name()
-    n = accounts_number
-    global ac
+        # Wait for mail and read it
+        for address in email_pass_pairs:
+            address = address[0:30]
+            guerrillamail.cli("setaddr", address)
+            mail_id = self.guerrilla_wait_for_mail()[6:15]
+            mail_str = str(guerrillamail.cli("get", mail_id))
+            current_link = self.extract_url(mail_str)
+            current_email = address + "@guerrillamailblock.com"
+            current_command = email_code_pairs[current_email].replace(
+                "@LINK@", current_link)
+            confirm_commands.append("{} {}".format(self.megareg_dir, current_command.replace("megareg.exe", "")))
 
-    # Register a bulk of size n
-    LOGGER.info("Registering accounts")
-    while n > 0:
-        email_text = random_mail()
-        # guerrillamail.cli("setaddr",email_text)
-        email = email_text + "@guerrillamailblock.com"
-        if fixed_pass:
-            email_password = fixed_pass
-        else:
-            email_password = random_text(21)
-        cmd = f"{megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
-        if proxy:
-            cmd += f" --proxy={proxy}"
-        LOGGER.log(0, cmd)
-        confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
-        confirm_text = confirm_text[confirm_text.find("-"):]
-        email_code_pairs[email] = confirm_text
-        email_pass_pairs[email] = email_password
-        n -= 1
-    LOGGER.info("Done registering")
+        # Confirm accounts
+        LOGGER.info("Confirming accounts")
+        for command in confirm_commands:
+            subprocess.check_output(command, shell=True)
 
-    # Wait for mail and read it
-    for address in email_pass_pairs:
-        address = address[0:30]
-        guerrillamail.cli("setaddr", address)
-        mail_id = guerrilla_wait_for_mail()[6:15]
-        mail_str = str(guerrillamail.cli("get", mail_id))
-        current_link = extract_url(mail_str)
-        current_email = address + "@guerrillamailblock.com"
-        current_command = email_code_pairs[current_email].replace(
-            "@LINK@", current_link)
-        confirm_commands.append("{} {}".format(megareg_dir, current_command.replace("megareg.exe", "")))
-
-    # Confirm accounts
-    LOGGER.info("Confirming accounts")
-    for command in confirm_commands:
-        subprocess.check_output(command, shell=True)
-
-    ac += accounts_number
-    LOGGER.info(
-        "Bulk done. Generated %s accounts in %ss. Currently: %s", accounts_number, round(time.time() - start, 1), ac)
-    return email_pass_pairs
+        self.ac += accounts_number
+        LOGGER.info(
+            "Bulk done. Generated %s accounts in %ss. Currently: %s",
+            accounts_number,
+            round(time.time() - start, 1),
+            self.ac
+        )
+        return email_pass_pairs
 
 
 # #################################### End account creator #############################################################
@@ -378,13 +387,14 @@ if not SCRIPT_ARGS.no_write:
 
 # Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
 a_lock = multiprocessing.Lock()
+account_factory = AccountFactory(MEGATOOLS_PATH)
 
 
 # todo: Support multiprocessing. confirm_command or something when you do two at once
 def get_account(amount, proxy=False):
     """""Wrapper for guerrilla_gen_bulk"""
     with a_lock:
-        accounts = guerrilla_gen_bulk(amount, False, f"{MEGATOOLS_PATH} reg", proxy)
+        accounts = account_factory.guerrilla_gen_bulk(amount, False, proxy)
     # Write credentials to file
     if not SCRIPT_ARGS.no_write:
         with open(account_file, "a") as file:
