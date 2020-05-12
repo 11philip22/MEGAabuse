@@ -1,4 +1,4 @@
 names
 bs4
 requests
-mega.py
+cx_freeze

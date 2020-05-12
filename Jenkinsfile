@@ -1,17 +1,38 @@
+parallel (
+    windows: {
+        try {
+             stage ('checkout scm') {
+                checkout scm
+            }           
+        }
+        
+        catch {
+            println(err.toString())
+            error(err.getMessage())
+            currentBuild.result = 'FAILED'
+
+            cleanWs()          
+        }    
+    },
+    unix: {
+        try {
+             stage ('checkout scm') {
+                checkout scm
+            }            
+        }
+        
+        catch {
+            println(err.toString())
+            error(err.getMessage())
+            currentBuild.result = 'FAILED'
+
+            cleanWs()          
+        }    
+    },
+)
+
 node ('master') {
     try {
-        stage ('checkout scm') {
-            checkout scm
-        }
-
-        stage('run dos2unix') {
-            sh 'find . -type f -print0 | xargs -0 dos2unix'
-        }
-
-        stage('Remove name from licence') {
-            sh 'sed -i "s/Philip Woldhek/Crucified Midget/g" MEGAabuse.py'
-        }
-
         stage ('Lint dockerfile') {
             def baseDir = System.getProperty("user.dir");
             docker.image('hadolint/hadolint:latest-debian').withRun('-v ${baseDir}/Dockerfile:/Dockerfile') { c ->
@@ -37,101 +58,86 @@ node ('master') {
 
             archiveArtifacts 'pylint.log'
         }
-
-        stage ('Create packages') {
-            sh 'mkdir -p {windows,linux,mac}/binaries'
-            sh 'echo windows linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
-            
-            parallel (
-                windows: {
-                    sh 'cp -r binaries/megacmd_windows windows/binaries/'
-                    sh 'cp -r binaries/megatools_win windows/binaries/'
-                },
-                linux: {
-                    sh 'cp -r binaries/megacmd_linux linux/binaries/'
-                    sh 'cp -r binaries/megatools_linux linux/binaries/'
-                },
-                mac: {
-                    sh 'cp -r binaries/megacmd_mac mac/binaries/'
-                    sh 'cp -r binaries/megatools_mac mac/binaries/'
-                },
-            )
-        }
-
-        stage ('Start web server') {
-            
-        }
     }
 
-    catch (err) {
+    catch {
         println(err.toString())
         error(err.getMessage())
         currentBuild.result = 'FAILED'
-        exception_msg = err.getMessage();
 
         cleanWs()
     }
 }
 
-node ('WindowsAgent') {
-    try {
-        stage ('Create exe') {
-
-        }
-    }
-
-    catch (err) {
-        println(err.toString())
-        error(err.getMessage())
-        currentBuild.result = 'FAILED'
-        exception_msg = err.getMessage();
-    }
-
-    finally {
-        stage ('Clean Workspace') {
-            cleanWs()
-        }
-    }
-}
-
-node ('master') {
-    try {
-        stage ('Stop webserver') {
-
-        }
-
-        stage ('Upload packages') {
-            sh 'mkdir abuse'
-
-            sh 'tar -zcvf abuse/windows.tar.gz windows'
-            sh 'tar -zcvf abuse/linux.tar.gz linux'
-            sh 'tar -zcvf abuse/mac.tar.gz mac'
-
-            sh 'chmod +x binaries/megatools_linux/megatools'
-            sh 'chmod +x binaries/megacmd_linux/*'
-            
-            def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Continue',
-                                    parameters: [booleanParam(defaultValue: true,
-                                    description: 'Check yes to upload tomega.nz', name: 'Yes')])
-            if (uploadBuild) {
-                sh 'python MEGAabuse.py -d abuse'
-                archiveArtifacts 'out.txt'
+prallel (
+    windows: {
+        node ('WindowsAgent') {
+            try {
+                stage ('checkout scm') {
+                    checkout scm
+                }
+                
+                stage ('Create packages') {
+                    powershell 'New-Item -ItemType Directory -Path ".\\windows"'
+                    powershell 'Copy-Item -Path .\\requirements.txt,.\\MEGAabuse.py,.\\guerrillamail.py -Destination .\\windows'
+                    powershell ''
+                }                
             }
 
+            catch {
+                println(err.toString())
+                error(err.getMessage())
+                currentBuild.result = 'FAILED'
+            }
+
+            finally {
+                stage ('Clean Workspace') {
+                    cleanWs()
+                }
+            }
         }
-    }
+    },
+    unix: {
+        node ('master') {
+            try {
+                stage ('Create packages') {
+                    sh 'mkdir -p {linux,mac}/binaries'
+                    sh 'echo linux mac | xargs -n 1 cp requirements.txt MEGAabuse.py guerrillamail.py'
 
-    catch (err) {
-        println(err.toString())
-        error(err.getMessage())
-        currentBuild.result = 'FAILED'
-        exception_msg = err.getMessage();
-    }
+                    parallel (
+                        linux: {
+                            sh 'cp -r binaries/megacmd_linux linux/binaries/'
+                            sh 'cp -r binaries/megatools_linux linux/binaries/'
+                        },
+                        mac: {
+                            sh 'cp -r binaries/megacmd_mac mac/binaries/'
+                            sh 'cp -r binaries/megatools_mac mac/binaries/'
+                        },
+                    )
+                }
 
-    finally {
-        stage ('Clean Workspace') {
-            cleanWs()
-        }
-    }
+                stage ('Upload packages') {
+                    sh 'mkdir abuse'
 
-}
+                    sh 'tar -zcvf abuse/linux.tar.gz linux'
+                    sh 'tar -zcvf abuse/mac.tar.gz mac'
+
+                    sh 'chmod +x binaries/megatools_linux/megatools'
+                    sh 'chmod +x binaries/megacmd_linux/*'
+                }
+            }
+
+            catch {
+                println(err.toString())
+                error(err.getMessage())
+                currentBuild.result = 'FAILED'
+            }
+
+            finally {
+                stage ('Clean Workspace') {
+                    cleanWs()
+                }
+            }
+        }        
+    }
+)
