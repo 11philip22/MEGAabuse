@@ -1,8 +1,6 @@
 node ('master') {
     try {
         stage ('checkout scm') {
-            cleanWs()  // REMOVE
-
             checkout scm
         }
 
@@ -14,7 +12,7 @@ node ('master') {
             sh 'sed -i "s/Philip Woldhek/Crucified Midget/g" MEGAabuse.py'
         }
 
-        stage ('lint dockerfile') {
+        stage ('Lint dockerfile') {
             def baseDir = System.getProperty("user.dir");
             docker.image('hadolint/hadolint:latest-debian').withRun('-v ${baseDir}/Dockerfile:/Dockerfile') { c ->
                 docker.image('hadolint/hadolint:latest-debian').inside() {
@@ -59,6 +57,10 @@ node ('master') {
                 },
             )
         }
+
+        stage ('Start web server') {
+            
+        }
     }
 
     catch (err) {
@@ -71,41 +73,34 @@ node ('master') {
     }
 }
 
-parallel (
-    runWebServer: {
-        node ('master') {
-            sh 'ls'
-        }
-    },
-    buildExe: {    
-        node ('WindowsAgent') {
-            try {
-                stage ('Create exe') {
-                    // cleanWs()  // REMOVE
-                    powershell 'dir'
-                    // unstash name: "winStash"
-                }
-            }
+node ('WindowsAgent') {
+    try {
+        stage ('Create exe') {
 
-            catch (err) {
-                println(err.toString())
-                error(err.getMessage())
-                currentBuild.result = 'FAILED'
-                exception_msg = err.getMessage();
-            }
-
-            finally {
-                stage ('Clean Workspace') {
-                    cleanWs()
-                }
-            }
         }
-    },
-)
+    }
+
+    catch (err) {
+        println(err.toString())
+        error(err.getMessage())
+        currentBuild.result = 'FAILED'
+        exception_msg = err.getMessage();
+    }
+
+    finally {
+        stage ('Clean Workspace') {
+            cleanWs()
+        }
+    }
+}
 
 node ('master') {
     try {
-        stage ("Upload packages") {
+        stage ('Stop webserver') {
+
+        }
+
+        stage ('Upload packages') {
             sh 'mkdir abuse'
 
             sh 'tar -zcvf abuse/windows.tar.gz windows'
@@ -116,12 +111,13 @@ node ('master') {
             sh 'chmod +x binaries/megacmd_linux/*'
             
             def uploadBuild = input(message: 'Upload to mega.nz?', ok: 'Continue',
-                                    parameters: [booleanParam(defaultValue: false,
-                                    description: 'Check yes to upload to mega.nz',name: 'Yes')])
+                                    parameters: [booleanParam(defaultValue: true,
+                                    description: 'Check yes to upload tomega.nz', name: 'Yes')])
             if (uploadBuild) {
                 sh 'python MEGAabuse.py -d abuse'
                 archiveArtifacts 'out.txt'
             }
+
         }
     }
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #  Copyright Philip Woldhek 2020
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -16,34 +15,31 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+""""Uploads files to MEGA. without limits (except speed lol)"""
+
 import argparse
 import atexit
 import json
 import logging
 import multiprocessing
+import multiprocessing.queues
 import re
 import subprocess
+import sys
 import time
-from multiprocessing.queues import Queue as MultiQueue  # multiprocessing.queues.Queue doesn't work
 from os import linesep, listdir, path, walk
 from pathlib import Path
 from random import choice
-import sys
 
 from bs4 import BeautifulSoup
 from names import get_first_name
 
 import guerrillamail
 
-if getattr(sys, 'frozen', False):
-    script_dir = path.dirname(path.realpath(sys.executable))
-else:
-    script_dir = path.dirname(path.realpath(__file__))
-
 # Parse arguments
-parser = argparse.ArgumentParser(description="MEGAabuse")
+PARSER = argparse.ArgumentParser(description="MEGAabuse")
 
-parser.add_argument(
+PARSER.add_argument(
     "-s", "--upload-subdirs",
     required=False,
     type=str,
@@ -51,7 +47,7 @@ parser.add_argument(
     metavar="<dir>",
     help="Uploads all sub-folders of specified folder"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-d", "--upload-dirs",
     required=False,
     type=str,
@@ -59,108 +55,115 @@ parser.add_argument(
     metavar="<dir>",
     help="Upload one or multiple folders"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-k", "--keep-alive",
     required=False,
     action="store_true",
     help="Reads from accounts.txt and keeps the accounts active"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-c", "--check-urls",
     required=False,
     action="store_true",
     help="Checks if urls are still up"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-v",
     required=False,
     action="store_true",
     help="Output logs"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-vv",
     required=False,
     action="store_true",
     help="Output debug logs"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-vvv",
     required=False,
     action="store_true",
     help="Output super debug logs"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-n", "--no-write",
     required=False,
     action="store_true",
     help="Dont read or write any file"
 )
-parser.add_argument(
+PARSER.add_argument(
     "-p", "--proxy",
     required=False,
     action="store_true",
     help="Use socks5 proxies defined in proxy.txt"
 )
 
-script_args = parser.parse_args()
+SCRIPT_ARGS = PARSER.parse_args()
 # Exit if help argument has been passed.
 # To prevent writing empty log files
 try:
-    if script_args.h:
+    if SCRIPT_ARGS.h:
         sys.exit(0)
 except AttributeError:
     # -h or --help has not been passed continue
     pass
 
-# Create logger
-logger = logging.getLogger('MEGAabuse')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Get script location.
+# Used for addressing MEGAcmd & megatools, writing resume files and writing logs.
+if getattr(sys, "frozen", False):
+    SCRIPT_DIR = path.dirname(path.realpath(sys.executable))
+else:
+    SCRIPT_DIR = path.dirname(path.realpath(__file__))
 
-if not script_args.no_write:  # Dont bother with log files if --no-write is passed
+# Create logger
+LOGGER = logging.getLogger('MEGAabuse')
+LOGGER.setLevel(logging.DEBUG)
+FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+if not SCRIPT_ARGS.no_write:  # Dont bother with log files if --no-write is passed
     # Create logs folder
-    log_dir = Path(script_dir, "logs")
-    if not log_dir.is_dir():
-        log_dir.mkdir()
+    LOG_DIR = Path(SCRIPT_DIR, "logs")
+    if not LOG_DIR.is_dir():
+        LOG_DIR.mkdir()
 
     # Create log file
-    log_file = Path(log_dir, "log.txt")
+    LOG_FILE = Path(LOG_DIR, "log.txt")
     # If log file exists rename old one before creating the file
-    if log_file.is_file():
+    if LOG_FILE.is_file():
         count = 0
         while True:
             new_file_name = f"log.txt.{count}"
-            new_file_path = Path(log_dir, new_file_name)
+            new_file_path = Path(LOG_DIR, new_file_name)
             if new_file_path.is_file():
                 count += 1
             else:
-                log_file.rename(new_file_path)
+                LOG_FILE.rename(new_file_path)
                 break
-    log_file.touch()
+    LOG_FILE.touch()
 
-    fh = logging.FileHandler(str(log_file))
-    if script_args.vvv:  # Enable super verbose output
+    fh = logging.FileHandler(str(LOG_FILE))
+    if SCRIPT_ARGS.vvv:  # Enable super verbose output
         fh.setLevel(logging.NOTSET)
     else:
         fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+    fh.setFormatter(FORMATTER)
+    LOGGER.addHandler(fh)
 
 ch = logging.StreamHandler()
-if script_args.vv:  # Enable debug mode
+if SCRIPT_ARGS.vv:  # Enable debug mode
     ch.setLevel(logging.DEBUG)
-elif script_args.v:  # Enable console log output
+elif SCRIPT_ARGS.v:  # Enable console log output
     ch.setLevel(logging.INFO)
-elif script_args.vvv:  # Enable super verbose output
+elif SCRIPT_ARGS.vvv:  # Enable super verbose output
     ch.setLevel(logging.NOTSET)
 else:
     ch.setLevel(logging.ERROR)
 
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+ch.setFormatter(FORMATTER)
+LOGGER.addHandler(ch)
 
-if script_args.keep_alive and script_args.no_write:  # These two options are not compatible and keep_alive will not run
-    logger.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
+if SCRIPT_ARGS.keep_alive and SCRIPT_ARGS.no_write:  # These two options are not compatible and keep_alive will not run
+    LOGGER.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
 
 # #################################### Begin mac os workaround #########################################################
 # Found solution for mac os not implemented error here: https://github.com/keras-team/autokeras/issues/368
@@ -195,7 +198,7 @@ class SharedCounter:
         return self.count.value
 
 
-class Queue(MultiQueue):
+class Queue(multiprocessing.queues.Queue):
     """ A portable implementation of multiprocessing.Queue.
 
     Because of multithreading / multiprocessing semantics, Queue.qsize() may
@@ -250,11 +253,12 @@ def guerrilla_wait_for_mail():
     wait_time = 0
     while True:
         if wait_time > 120:
-            logger.info("Waiting for mail time exceeded 2 minutes. Aborting")
+            LOGGER.info("Waiting for mail time exceeded 2 minutes. Aborting")
             return False
         mail_str = str(guerrillamail.cli("list"))
         if "welcome@mega.nz" in mail_str:
             return mail_str
+        wait_time += 2
         time.sleep(2)
 
 
@@ -264,12 +268,13 @@ def extract_url(mail_str):
     for link in soup.findAll("a"):
         if link.get("href") is not None and "#confirm" in link.get("href"):
             return link.get("href").replace('3D"', "").replace('"', "")
+    return None
 
 
 def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
     """"Creates mega.nz accounts using guerrilla mail"""
     start = time.time()
-    logger.info("Starting a new bulk")
+    LOGGER.info("Starting a new bulk")
     email_code_pairs = {}
     email_pass_pairs = {}
     confirm_commands = []
@@ -278,7 +283,7 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
     global ac
 
     # Register a bulk of size n
-    logger.info("Registering accounts")
+    LOGGER.info("Registering accounts")
     while n > 0:
         email_text = random_mail()
         # guerrillamail.cli("setaddr",email_text)
@@ -290,13 +295,13 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
         cmd = f"{megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
         if proxy:
             cmd += f" --proxy={proxy}"
-        logger.log(0, cmd)
+        LOGGER.log(0, cmd)
         confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
         confirm_text = confirm_text[confirm_text.find("-"):]
         email_code_pairs[email] = confirm_text
         email_pass_pairs[email] = email_password
         n -= 1
-    logger.info("Done registering")
+    LOGGER.info("Done registering")
 
     # Wait for mail and read it
     for address in email_pass_pairs:
@@ -311,12 +316,12 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
         confirm_commands.append("{} {}".format(megareg_dir, current_command.replace("megareg.exe", "")))
 
     # Confirm accounts
-    logger.info("Confirming accounts")
+    LOGGER.info("Confirming accounts")
     for command in confirm_commands:
         subprocess.check_output(command, shell=True)
 
     ac += accounts_number
-    logger.info(
+    LOGGER.info(
         "Bulk done. Generated %s accounts in %ss. Currently: %s", accounts_number, round(time.time() - start, 1), ac)
     return email_pass_pairs
 
@@ -325,49 +330,49 @@ def guerrilla_gen_bulk(accounts_number, fixed_pass, megareg_dir, proxy):
 # #################################### MEGAabuse!!! ####################################################################
 
 # Get the right megatools for your system
-bin_path = Path(script_dir, "binaries")
+BIN_PATH = Path(SCRIPT_DIR, "binaries")
 if sys.platform == "win32":
-    megatools_path = Path(bin_path, "megatools_win", "megatools.exe")
-    megacmd_path = Path(bin_path, "megacmd_windows")
-    cmd_server_path = Path(megacmd_path, "MEGAcmdServer.exe")
+    MEGATOOLS_PATH = Path(BIN_PATH, "megatools_win", "megatools.exe")
+    MEGACMD_PATH = Path(BIN_PATH, "megacmd_windows")
+    CMD_SERVER_PATH = Path(MEGACMD_PATH, "MEGAcmdServer.exe")
 
 elif sys.platform == "darwin":
-    megatools_path = Path(bin_path, "megatools_mac", "megatools")
-    megacmd_path = Path(bin_path, "megacmd_mac")
+    MEGATOOLS_PATH = Path(BIN_PATH, "megatools_mac", "megatools")
+    MEGACMD_PATH = Path(BIN_PATH, "megacmd_mac")
 
 elif sys.platform == "linux":
-    megatools_path = Path(bin_path, "megatools_linux", "megatools")
-    megacmd_path = Path(bin_path, "megacmd_linux")
-    cmd_server_path = Path(megacmd_path, "mega-cmd-server")
+    MEGATOOLS_PATH = Path(BIN_PATH, "megatools_linux", "megatools")
+    MEGACMD_PATH = Path(BIN_PATH, "megacmd_linux")
+    CMD_SERVER_PATH = Path(MEGACMD_PATH, "mega-cmd-server")
 else:
     print("OS not supported")
     sys.exit(1)
 
-if not megatools_path.is_file():
+if not MEGATOOLS_PATH.is_file():
     raise FileNotFoundError("No megatools found!")
 
 # Start MEGA cmd server
 if sys.platform == "linux" or sys.platform == "win32":
-    if not cmd_server_path.is_file():
+    if not CMD_SERVER_PATH.is_file():
         raise FileNotFoundError("No megacmd found!")
 
     mcmd_p = subprocess.Popen(
-        str(cmd_server_path),
+        str(CMD_SERVER_PATH),
         shell=True,
         stdout=subprocess.PIPE,
-        cwd=megacmd_path
+        cwd=MEGACMD_PATH
     )
 
-    # Stop MEGA cmd server when program exits
     def exit_handler():
+        """"Stop MEGA cmd server when program exits"""
         logging.debug("Killing MEGA cmd server")
         if mcmd_p:
             mcmd_p.terminate()
     atexit.register(exit_handler)
 
 # Create accounts.txt
-if not script_args.no_write:
-    account_file = Path(script_dir, "accounts.txt")
+if not SCRIPT_ARGS.no_write:
+    account_file = Path(SCRIPT_DIR, "accounts.txt")
     if not account_file.is_file():
         account_file.touch()
 
@@ -379,9 +384,9 @@ a_lock = multiprocessing.Lock()
 def get_account(amount, proxy=False):
     """""Wrapper for guerrilla_gen_bulk"""
     with a_lock:
-        accounts = guerrilla_gen_bulk(amount, False, f"{megatools_path} reg", proxy)
+        accounts = guerrilla_gen_bulk(amount, False, f"{MEGATOOLS_PATH} reg", proxy)
     # Write credentials to file
-    if not script_args.no_write:
+    if not SCRIPT_ARGS.no_write:
         with open(account_file, "a") as file:
             for user, password in accounts.items():
                 file.write(f"{user};{password}" + linesep)
@@ -396,24 +401,24 @@ def update_json_file(file, data):
 
 def logout():
     """"Logs out of megacmd"""
-    logger.log(0, "Logout function called")
+    LOGGER.log(0, "Logout function called")
 
-    cmd_path = Path(megacmd_path, "mega-logout")
+    cmd_path = Path(MEGACMD_PATH, "mega-logout")
     cmd = str(cmd_path)
-    logger.log(0, cmd)
+    LOGGER.log(0, cmd)
 
-    subprocess.Popen(cmd, shell=True, cwd=megacmd_path).wait()
+    subprocess.Popen(cmd, shell=True, cwd=MEGACMD_PATH).wait()
 
 
 def login(username, password):
     """"Logs in to megacmd"""
-    logger.log(0, "Login function called")
+    LOGGER.log(0, "Login function called")
 
-    cmd_path = Path(megacmd_path, "mega-login")
+    cmd_path = Path(MEGACMD_PATH, "mega-login")
     cmd = f"{cmd_path} \"{username}\" \"{password}\""
-    logger.log(0, cmd)
+    LOGGER.log(0, cmd)
 
-    subprocess.Popen(cmd, shell=True, cwd=megacmd_path).wait()
+    subprocess.Popen(cmd, shell=True, cwd=MEGACMD_PATH).wait()
 
 
 # Regex for extracting export url from export command output
@@ -422,71 +427,71 @@ url_regex = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[
 
 def export_folder(username, password, folder_name):
     """"Exports a folder"""
-    logger.log(0, "Export function called")
+    LOGGER.log(0, "Export function called")
 
     logout()
     login(username, password)
 
-    cmd_path = Path(megacmd_path, "mega-export")
+    cmd_path = Path(MEGACMD_PATH, "mega-export")
     cmd = f"{cmd_path} -a {folder_name}"
-    logger.log(0, cmd)
+    LOGGER.log(0, cmd)
 
     output = subprocess.Popen(
         cmd,
         shell=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        cwd=megacmd_path
+        cwd=MEGACMD_PATH
     ).communicate(b"yes")  # Set to 'no' if you are a pirate
 
     std_out_text = output[0].decode("utf-8")
 
     # Return url
     url = url_regex.findall(std_out_text)[0]
-    logger.info("Exported: %s", url)
+    LOGGER.info("Exported: %s", url)
     return url
 
 
 def create_folder(user_name, password, folder_name, proxy=False):
     """"Create a folder om a mega account"""
-    logger.log(0, "Create folder function called")
+    LOGGER.log(0, "Create folder function called")
 
-    cmd = f"{megatools_path} mkdir {folder_name} -u {user_name} -p {password}"
+    cmd = f"{MEGATOOLS_PATH} mkdir {folder_name} -u {user_name} -p {password}"
     if proxy:
         cmd += f" --proxy={proxy}"
-    logger.log(0, cmd)
+    LOGGER.log(0, cmd)
 
     subprocess.Popen(cmd, shell=True).wait()
 
 
 def upload_file(username, password, remote_path, file_path, proxy=False):
     """"Uploads a file to mega"""
-    logger.log(0, "Upload file function called")
+    LOGGER.log(0, "Upload file function called")
 
-    cmd = f"{megatools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
+    cmd = f"{MEGATOOLS_PATH} put -u {username} -p {password} --path {remote_path} {file_path}"
     if proxy:
         cmd += f" --proxy={proxy}"
-    logger.log(0, cmd)
+    LOGGER.log(0, cmd)
 
     return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
 
 
 # Create resume dir
-if not script_args.no_write:
-    resume_dir = Path(script_dir, "resume")
+if not SCRIPT_ARGS.no_write:
+    resume_dir = Path(SCRIPT_DIR, "resume")
     if not resume_dir.is_dir():
         resume_dir.mkdir()
 
 
 def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
     """"Uploads the chunks to mega.nz"""
-    logger.log(0, "Upload chunks function called")
+    LOGGER.log(0, "Upload chunks function called")
 
     resume_data = []
-    if not script_args.no_write:
+    if not SCRIPT_ARGS.no_write:
         # Create resume file
         resume_file = Path(resume_dir, f"{dir_name}.json")
-        if not resume_file.is_file() and not script_args.no_write:
+        if not resume_file.is_file() and not SCRIPT_ARGS.no_write:
             resume_file.touch()
 
         # Try to load data from resume file if fails create empty resume data var
@@ -503,8 +508,8 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
         # If chunk is not in resume data create it and try again
         while True:
             try:
-                a = resume_data[c_counter]
-                logger.debug("Found chunk in resume data %s", a)
+                r_data = resume_data[c_counter]
+                LOGGER.debug("Found chunk in resume data %s", r_data)
                 break
             except IndexError:
                 chunk_resume = {
@@ -526,7 +531,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
         for file in chunk["files"]:
             if file not in uploaded_files:
-                logger.info("Uploading: %s", file)
+                LOGGER.info("Uploading: %s", file)
 
                 file_path = Path(file)
                 extension = file.split(".")[-1]
@@ -537,12 +542,12 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
                     # Update resume data
                     uploaded_files.append(file)
-                    if not script_args.no_write:
+                    if not SCRIPT_ARGS.no_write:
                         update_json_file(resume_file, resume_data)
                 else:
-                    logger.error("Error uploading: %s", file)
+                    LOGGER.error("Error uploading: %s", file)
             else:
-                logger.info("Skipping: %s", file)
+                LOGGER.info("Skipping: %s", file)
 
         # Folder path is with / instead of /Root because the export folder function
         # uses megacmd instead of megatools.
@@ -551,7 +556,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
         # Write export url to resume file
         resume_data[c_counter].update({"export url": export_url})
-        if not script_args.no_write:
+        if not SCRIPT_ARGS.no_write:
             update_json_file(resume_file, resume_data)
 
         c_counter += 1
@@ -591,8 +596,8 @@ def divide_files(paths: dict, max_size):  # Max size is in bits
 
 # Read done file
 done = []
-if not script_args.no_write:
-    done_file = Path(script_dir, "done.txt")
+if not SCRIPT_ARGS.no_write:
+    done_file = Path(SCRIPT_DIR, "done.txt")
     if not done_file.is_file():
         done_file.touch()
     else:
@@ -605,15 +610,15 @@ total_files_count = multiprocessing.Value("i", 0)
 
 def upload_folder(folder_path, proxy=False):
     """"Uploads a folder to mega.nz returns download urls"""
-    logger.log(0, "Upload folder function called")
+    LOGGER.log(0, "Upload folder function called")
 
-    if folder_path in done and not script_args.no_write:
-        logger.info("Skipping: %s", folder_path)
+    if folder_path in done and not SCRIPT_ARGS.no_write:
+        LOGGER.info("Skipping: %s", folder_path)
         return []
-    logger.info("Uploading %s", folder_path)
+    LOGGER.info("Uploading %s", folder_path)
 
     paths = find_files(folder_path, [".json", ])
-    logger.info("%s: Found %s files", folder_path, len(paths))
+    LOGGER.info("%s: Found %s files", folder_path, len(paths))
     total_files_count.value += len(paths)
     file_lists = divide_files(paths, 15000000000)
     folder_name = Path(folder_path).parts[-1]
@@ -626,38 +631,37 @@ def upload_folder(folder_path, proxy=False):
             "files": file_list
         })
 
-    logger.info("Uploading: %s chunks", len(chunks))
+    LOGGER.info("Uploading: %s chunks", len(chunks))
     export_urls = upload_chunks(chunks, folder_name, proxy)
 
     done.append(folder_path)
-    if not script_args.no_write:
+    if not SCRIPT_ARGS.no_write:
         with open(done_file, "a") as file:
             file.write(folder_path + linesep)
 
     return export_urls
 
 
-proxies_store = multiprocessing.Queue()  # Available proxies
+PROXY_STORE = multiprocessing.Queue()  # Available proxies
 
-if script_args.proxy:
+if SCRIPT_ARGS.proxy:
     # If --proxy is passed load proxies from proxy file
-    proxy_file_path = Path(script_dir, "proxies.txt")
+    proxy_file_path = Path(SCRIPT_DIR, "proxies.txt")
     if not proxy_file_path.is_file():
         proxy_file_path.touch()
 
     with open(proxy_file_path) as proxy_file:
         for proxy_line in proxy_file:
             prox = proxy_line.strip("\n")
-            logger.debug("Loaded: %s", prox)
-            proxies_store.put(prox)
-    logger.info("%s proxies loaded", proxies_store.qsize())
+            LOGGER.debug("Loaded: %s", prox)
+            PROXY_STORE.put(prox)
+    LOGGER.info("%s proxies loaded", PROXY_STORE.qsize())
 
-# No proxies run on 1 thread
-if proxies_store.qsize() == 0:
-    THREADS = 1
-else:
     # 1 thread for each proxy
-    THREADS = proxies_store.qsize()
+    THREADS = PROXY_STORE.qsize()
+else:
+    # No proxies. Use 1 thread
+    THREADS = 1
 
 # Counter of all the active workers. Used for logging purposes.
 worker_count = multiprocessing.Value("i", 0)
@@ -667,47 +671,47 @@ def worker(folder_path):
     """"This is actually just a wrapper around
         upload_folder to handle the proxies"""
     worker_count.value += 1  # Add to active worker counter. Used for logging purposes.
-    logger.debug("Worker spawned. Total workers: %s", worker_count.value)
+    LOGGER.debug("Worker spawned. Total workers: %s", worker_count.value)
 
     proxy = False
-    if script_args.proxy:
+    if SCRIPT_ARGS.proxy:
         # Get proxy
-        proxy = proxies_store.get()
-        logger.debug("Using proxy: %s", proxy)
-        logger.debug("Proxies in store: %s", proxies_store.qsize())
+        proxy = PROXY_STORE.get()
+        LOGGER.debug("Using proxy: %s", proxy)
+        LOGGER.debug("Proxies in store: %s", PROXY_STORE.qsize())
 
     exported_urls = upload_folder(folder_path, proxy)
-    logger.info("Done uploading: %s", folder_path)
+    LOGGER.info("Done uploading: %s", folder_path)
 
-    if script_args.proxy:
+    if SCRIPT_ARGS.proxy:
         # Return proxy
-        proxies_store.put(proxy)
-        logger.debug("Returning proxy: %s", proxy)
-        logger.debug("Proxies in store: %s", proxies_store.qsize())
+        PROXY_STORE.put(proxy)
+        LOGGER.debug("Returning proxy: %s", proxy)
+        LOGGER.debug("Proxies in store: %s", PROXY_STORE.qsize())
 
     worker_count.value -= 1  # Subtract to active worker counter. Used for logging purposes.
-    logger.debug("Worker finished. Total workers: %s", worker_count.value)
+    LOGGER.debug("Worker finished. Total workers: %s", worker_count.value)
 
     return {folder_path: exported_urls}
 
 
 # Create output file
-if not script_args.no_write:
-    output_file = Path(script_dir, "out.txt")
+if not SCRIPT_ARGS.no_write:
+    output_file = Path(SCRIPT_DIR, "out.txt")
     if not output_file.is_file():
         output_file.touch()
 
 
 def urls_to_file(urls: list, folder_path):
     """"Write results to output file"""
-    logger.log(0, "urls_to_file function called")
+    LOGGER.log(0, "urls_to_file function called")
 
-    logger.debug("Writing to file")
+    LOGGER.debug("Writing to file")
 
     with open(output_file, "a") as out_file:
         out_file.write(folder_path + linesep)
         for url in urls:
-            logger.debug("Writing to results file: %s", url)
+            LOGGER.debug("Writing to results file: %s", url)
             out_file.write(url + linesep)
         out_file.write(linesep)
 
@@ -720,21 +724,21 @@ def upload_manager(queue):
             results = pool.map(worker, queue)  # Map pool to upload queue
     except RuntimeError as exc:
         tb = sys.exc_info()[2]
-        logger.error(exc.with_traceback(tb))
+        LOGGER.error(exc.with_traceback(tb))
         return
 
     all_export_urls = {}
     for res in results:
         all_export_urls.update(res)
 
-    logger.info("Processed %s files", total_files_count.value)
+    LOGGER.info("Processed %s files", total_files_count.value)
 
     # Print results
     print()
     # Print folder path and export urls
     for e_file_path, res in all_export_urls.items():
         # Write to file
-        if not script_args.no_write:
+        if not SCRIPT_ARGS.no_write:
             urls_to_file(res, e_file_path)
         # Print folder path
         print(linesep + e_file_path)
@@ -744,31 +748,31 @@ def upload_manager(queue):
     print()
 
 
-upload_queue = []  # To be downloaded
+UPLOAD_QUEUE = []  # To be downloaded
 
 # Upload sub dirs
-if script_args.upload_subdirs:
-    logger.debug("Uploading sub-directories")
+if SCRIPT_ARGS.upload_subdirs:
+    LOGGER.debug("Uploading sub-directories")
 
-    for folder in script_args.upload_subdirs:
+    for folder in SCRIPT_ARGS.upload_subdirs:
         d_path = Path(folder)
 
         for sub_folder in listdir(d_path):  # Append target folders to upload list
-            upload_queue.append(Path(d_path, sub_folder))
+            UPLOAD_QUEUE.append(Path(d_path, sub_folder))
 
 # Upload multiple dirs
-elif script_args.upload_dirs:
-    logger.debug("Uploading multiple directories")
+elif SCRIPT_ARGS.upload_dirs:
+    LOGGER.debug("Uploading multiple directories")
 
-    for folder in script_args.upload_dirs:  # Append target folders to upload list
-        upload_queue.append(folder)
+    for folder in SCRIPT_ARGS.upload_dirs:  # Append target folders to upload list
+        UPLOAD_QUEUE.append(folder)
 
-if script_args.upload_dirs or script_args.upload_subdirs:
-    upload_manager(upload_queue)  # Start Upload process
+if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
+    upload_manager(UPLOAD_QUEUE)  # Start Upload process
 
 # Keeps accounts active
-if script_args.keep_alive and not script_args.no_write:  # Does not run if --no-write has been passed
-    logger.debug("Keeping accounts alive")
+if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-write has been passed
+    LOGGER.debug("Keeping accounts alive")
 
     with open(account_file) as account_f:
         # Read accounts from file
@@ -777,9 +781,9 @@ if script_args.keep_alive and not script_args.no_write:  # Does not run if --no-
             usern, passwd = line.split(";")
 
             # Log in and log out using megacmd
-            logger.info("Logging into: %s %s", usern, passwd)
+            LOGGER.info("Logging into: %s %s", usern, passwd)
             logout()
             login(usern, passwd)
             logout()
 
-logger.info("Done")
+LOGGER.info("Done")
