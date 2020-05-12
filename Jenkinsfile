@@ -11,7 +11,7 @@ parallel (
             error(err.getMessage())
             currentBuild.result = 'FAILED'
 
-            cleanWs()          
+            // cleanWs()          
         }    
     },
     unix: {
@@ -26,7 +26,7 @@ parallel (
             error(err.getMessage())
             currentBuild.result = 'FAILED'
 
-            cleanWs()          
+            // cleanWs()          
         }    
     },
 )
