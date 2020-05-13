@@ -13,3 +13,6 @@ proxies.txt
 docker-compose.yml
 conf_proxy.yml
 Dockerfile
+setup.py
+.pylintrc
+.gitignore
