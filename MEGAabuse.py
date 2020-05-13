@@ -22,19 +22,15 @@ import atexit
 import json
 import logging
 import multiprocessing
-import multiprocessing.queues
 import re
 import subprocess
 import sys
-import time
 from os import linesep, listdir, path, walk
 from pathlib import Path
-from random import choice
+from operator import not_
 
-from bs4 import BeautifulSoup
-from names import get_first_name
-
-import guerrillamail
+from accountfactory import AccountFactory
+from macqueue import Queue
 
 # Parse arguments
 PARSER = argparse.ArgumentParser(description="MEGAabuse")
@@ -165,173 +161,6 @@ LOGGER.addHandler(STREAM_HANDLER)
 if SCRIPT_ARGS.keep_alive and SCRIPT_ARGS.no_write:  # These two options are not compatible and keep_alive will not run
     LOGGER.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
 
-# Found solution for mac os not implemented error here: https://github.com/keras-team/autokeras/issues/368
-
-
-class SharedCounter:
-    """" A synchronized shared counter.
-
-    The locking done by multiprocessing.Value ensures that only a single
-    process or thread may read or write the in-memory ctypes object. However,
-    in order to do n += 1, Python performs a read followed by a write, so a
-    second process may read the old value before the new one is written by the
-    first process. The solution is to use a multiprocessing.Lock to guarantee
-    the atomicity of the modifications to Value.
-
-    This class comes almost entirely from Eli Bendersky's blog:
-    http://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing/
-
-    """
-
-    def __init__(self, val=0):
-        self.count = multiprocessing.Value('i', val)
-
-    def increment(self, incr=1):
-        """" Increment the counter by n (default = 1) """
-        with self.count.get_lock():
-            self.count.value += incr
-
-    @property
-    def value(self):
-        """" Return the value of the counter """
-        return self.count.value
-
-
-class Queue(multiprocessing.queues.Queue):
-    """" A portable implementation of multiprocessing.Queue.
-
-    Because of multithreading / multiprocessing semantics, Queue.qsize() may
-    raise the NotImplementedError exception on Unix platforms like Mac OS X
-    where sem_getvalue() is not implemented. This subclass addresses this
-    problem by using a synchronized shared counter (initialized to zero) and
-    increasing / decreasing its value every time the put() and get() methods
-    are called, respectively. This not only prevents NotImplementedError from
-    being raised, but also allows us to implement a reliable version of both
-    qsize() and empty().
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Queue, self).__init__(*args, **kwargs, ctx=multiprocessing.get_context())
-        self.size = SharedCounter(0)
-
-    def put(self, obj, block=True, timeout=None):
-        self.size.increment(1)
-        super(Queue, self).put(obj, block, timeout)
-
-    def get(self, block=True, timeout=None):
-        self.size.increment(-1)
-        return super(Queue, self).get(block, timeout)
-
-    def qsize(self):
-        """" Reliable implementation of multiprocessing.Queue.qsize() """
-        return self.size.value
-
-    def empty(self):
-        """" Reliable implementation of multiprocessing.Queue.empty() """
-        return not self.qsize()
-
-
-class AccountFactory:
-    """" Creates mega.nz accounts using guerrillamail """
-
-    total_accounts_created = 0  # Total accounts created
-
-    def __init__(self, tools_path):
-        self.megareg_dir = f"{tools_path} reg"
-
-    @staticmethod
-    def random_text(length):
-        """" Returns a random string with specified length """
-        return ''.join(
-            [choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(length)])
-
-    @staticmethod
-    def random_mail():
-        """" Returns a 30 character string """
-        return ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(30)])
-
-    @staticmethod
-    def guerrilla_wait_for_mail():
-        """" Wait for welcome mail """
-        wait_time = 0
-        while True:
-            if wait_time > 120:
-                LOGGER.info("Waiting for mail time exceeded 2 minutes. Aborting")
-                return False
-            mail_str = str(guerrillamail.cli("list"))
-            if "welcome@mega.nz" in mail_str:
-                return mail_str
-            wait_time += 2
-            time.sleep(2)
-
-    @staticmethod
-    def extract_url(mail_str):
-        """" Extracts url from mail """
-        soup = BeautifulSoup(mail_str, "html.parser")
-        for link in soup.findAll("a"):
-            if link.get("href") is not None and "#confirm" in link.get("href"):
-                return link.get("href").replace('3D"', "").replace('"', "")
-        return None
-
-    def guerrilla_gen_bulk(self, accounts_number, fixed_pass, proxy):
-        """" Creates mega.nz accounts using guerrilla mail """
-        start = time.time()
-        LOGGER.info("Starting a new bulk")
-        email_code_pairs = {}
-        email_pass_pairs = {}
-        confirm_commands = []
-        name = get_first_name()
-        needed = accounts_number
-
-        # Register a bulk of size "needed"
-        LOGGER.info("Registering accounts")
-        while needed > 0:
-            email_text = self.random_mail()
-            # guerrillamail.cli("setaddr",email_text)
-            email = email_text + "@guerrillamailblock.com"
-            if fixed_pass:
-                email_password = fixed_pass
-            else:
-                email_password = self.random_text(21)
-            cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
-            if proxy:
-                cmd += f" --proxy={proxy}"
-            LOGGER.log(0, cmd)
-            confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
-            confirm_text = confirm_text[confirm_text.find("-"):]
-            email_code_pairs[email] = confirm_text
-            email_pass_pairs[email] = email_password
-            needed -= 1
-        LOGGER.info("Done registering")
-
-        # Wait for mail and read it
-        for address in email_pass_pairs:
-            address = address[0:30]
-            guerrillamail.cli("setaddr", address)
-            mail_id = self.guerrilla_wait_for_mail()[6:15]
-            mail_str = str(guerrillamail.cli("get", mail_id))
-            current_link = self.extract_url(mail_str)
-            current_email = address + "@guerrillamailblock.com"
-            current_command = email_code_pairs[current_email].replace(
-                "@LINK@", current_link)
-            confirm_commands.append("{} {}".format(self.megareg_dir, current_command.replace("megareg.exe", "")))
-
-        # Confirm accounts
-        LOGGER.info("Confirming accounts")
-        for command in confirm_commands:
-            subprocess.check_output(command, shell=True)
-
-        self.total_accounts_created += accounts_number
-        LOGGER.info(
-            "Bulk done. Generated %s accounts in %ss. Currently: %s",
-            accounts_number,
-            round(time.time() - start, 1),
-            self.total_accounts_created
-        )
-        return email_pass_pairs
-
-
 # Get the right megatools for your system
 BIN_PATH = Path(SCRIPT_DIR, "binaries")
 if sys.platform == "win32":
@@ -354,108 +183,130 @@ else:
 if not MEGATOOLS_PATH.is_file():
     raise FileNotFoundError("No megatools found!")
 
-# Start MEGA cmd server
-if sys.platform == "linux" or sys.platform == "win32":
-    if not CMD_SERVER_PATH.is_file():
-        raise FileNotFoundError("No megacmd found!")
 
-    CMD_SERVER_PROC = subprocess.Popen(
-        str(CMD_SERVER_PATH),
-        shell=True,
-        stdout=subprocess.PIPE,
-        cwd=MEGACMD_PATH
-    )
+class CreateAccount(AccountFactory):
+    # Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
+    ACC_LOCK = multiprocessing.Lock()
 
-    def exit_handler():
-        """"Stop MEGA cmd server when program exits"""
-        logging.debug("Killing MEGA cmd server")
-        if CMD_SERVER_PROC:
-            CMD_SERVER_PROC.terminate()
-    atexit.register(exit_handler)
+    def __init__(self, tools_path, file, logger=None, write_files=False):
+        super().__init__(tools_path, logger)
+        self.output = write_files
 
-# Create accounts.txt
-if not SCRIPT_ARGS.no_write:
-    account_file = Path(SCRIPT_DIR, "accounts.txt")
-    if not account_file.is_file():
-        account_file.touch()
+        # Create accounts.txt
+        if self.output:
+            self.account_file = Path(file)
+            if not self.account_file.is_file():
+                self.account_file.touch()
 
-# Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
-ACC_LOCK = multiprocessing.Lock()
-ACC_FACTORY = AccountFactory(MEGATOOLS_PATH)
+    # todo: Support multiprocessing. confirm_command or something when you do two at once
+    def get(self, amount, proxy=False):
+        """"" Wrapper for guerrilla_gen_bulk """
+
+        with self.ACC_LOCK:
+            accounts = super().guerrilla_gen_bulk(amount, False, proxy)
+
+        # Write credentials to file
+        if self.output:
+            with open(self.account_file, "a") as file:
+                for user, password in accounts.items():
+                    file.write(f"{user};{password}" + linesep)
+        return accounts
 
 
-# todo: Support multiprocessing. confirm_command or something when you do two at once
-def get_account(amount, proxy=False):
-    """"" Wrapper for guerrilla_gen_bulk """
-    with ACC_LOCK:
-        accounts = ACC_FACTORY.guerrilla_gen_bulk(amount, False, proxy)
-    # Write credentials to file
-    if not SCRIPT_ARGS.no_write:
-        with open(account_file, "a") as file:
-            for user, password in accounts.items():
-                file.write(f"{user};{password}" + linesep)
-    return accounts
+class MegaCmd:
+    # Regex for extracting export url from export command output
+    URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+    LOCK = multiprocessing.Lock()  # Used for locking the pool while exporting.
+
+    def __init__(self, m_cmd_path, *args, logger=None):
+        # Create logger or sub logger for class
+        if logger is None:
+            logger_name = "MegaExport"
+        else:
+            logger_name = f"{logger.name}.MegaExport"
+        self.logger = logging.getLogger(logger_name)
+
+        server_path = Path(args[0])
+        self.cmd_path = Path(m_cmd_path)
+
+        # Start MEGA cmd server
+        if sys.platform == "linux" or sys.platform == "win32":
+            if not server_path.is_file():
+                raise FileNotFoundError("No megacmd found!")
+
+            cmd_server_proc = subprocess.Popen(
+                str(server_path),
+                shell=True,
+                stdout=subprocess.PIPE,
+                cwd=self.cmd_path
+            )
+
+            def exit_handler():
+                """"Stop MEGA cmd server when program exits"""
+                logging.debug("Killing MEGA cmd server")
+                if cmd_server_proc:
+                    cmd_server_proc.terminate()
+
+            atexit.register(exit_handler)
+
+    def logout(self):
+        """" Logs out of megacmd """
+        self.logger.log(0, "Logout function called")
+
+        cmd_path = Path(self.cmd_path, "mega-logout")
+        cmd = str(cmd_path)
+        self.logger.log(0, cmd)
+
+        subprocess.Popen(cmd, shell=True, cwd=self.cmd_path).wait()
+
+    def login(self, username, password):
+        """" Logs in to megacmd """
+        self.logger.log(0, "Login function called")
+
+        cmd_path = Path(self.cmd_path, "mega-login")
+        cmd = f"{cmd_path} \"{username}\" \"{password}\""
+        self.logger.log(0, cmd)
+
+        subprocess.Popen(cmd, shell=True, cwd=self.cmd_path).wait()
+
+    def export_folder(self, username, password, folder_name):
+        """" Exports a folder """
+        self.logger.log(0, "Export function called")
+
+        with self.LOCK:
+            self.logout()
+            self.login(username, password)
+
+            cmd_path = Path(self.cmd_path, "mega-export")
+            cmd = f"{cmd_path} -a {folder_name}"
+            self.logger.log(0, cmd)
+
+            output = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                cwd=self.cmd_path
+            ).communicate(b"yes")  # Set to 'no' if you are a pirate
+
+        std_out_text = output[0].decode("utf-8")
+
+        # Return url
+        url = self.URL_REGEX.findall(std_out_text)[0]
+        self.logger.info("Exported: %s", url)
+        return url
+
+    def keep_alive(self, username, password):
+        with self.LOCK:
+            self.logout()
+            self.login(username, password)
+            self.logout()
 
 
 def update_json_file(file, data):
     """" Updates a json file with new data """
     with open(file, "w") as json_file:
         json.dump(data, json_file, indent=4)
-
-
-def logout():
-    """" Logs out of megacmd """
-    LOGGER.log(0, "Logout function called")
-
-    cmd_path = Path(MEGACMD_PATH, "mega-logout")
-    cmd = str(cmd_path)
-    LOGGER.log(0, cmd)
-
-    subprocess.Popen(cmd, shell=True, cwd=MEGACMD_PATH).wait()
-
-
-def login(username, password):
-    """" Logs in to megacmd """
-    LOGGER.log(0, "Login function called")
-
-    cmd_path = Path(MEGACMD_PATH, "mega-login")
-    cmd = f"{cmd_path} \"{username}\" \"{password}\""
-    LOGGER.log(0, cmd)
-
-    subprocess.Popen(cmd, shell=True, cwd=MEGACMD_PATH).wait()
-
-
-# Regex for extracting export url from export command output
-URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
-EXPORT_LOCK = multiprocessing.Lock()  # Used for locking the pool while exporting.
-
-
-def export_folder(username, password, folder_name):
-    """" Exports a folder """
-    LOGGER.log(0, "Export function called")
-
-    with EXPORT_LOCK:
-        logout()
-        login(username, password)
-
-        cmd_path = Path(MEGACMD_PATH, "mega-export")
-        cmd = f"{cmd_path} -a {folder_name}"
-        LOGGER.log(0, cmd)
-
-        output = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            cwd=MEGACMD_PATH
-        ).communicate(b"yes")  # Set to 'no' if you are a pirate
-
-    std_out_text = output[0].decode("utf-8")
-
-    # Return url
-    url = URL_REGEX.findall(std_out_text)[0]
-    LOGGER.info("Exported: %s", url)
-    return url
 
 
 def create_folder(user_name, password, folder_name, proxy=False):
@@ -488,6 +339,13 @@ if not SCRIPT_ARGS.no_write:
     if not resume_dir.is_dir():
         resume_dir.mkdir()
 
+if sys.platform == "darwin":
+    mega_export = MegaCmd(MEGACMD_PATH)
+else:
+    mega_export = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
+create_acc = CreateAccount(MEGATOOLS_PATH, Path(SCRIPT_DIR, "accounts.txt"),
+                           logger=LOGGER, write_files=not_(SCRIPT_ARGS.no_write))
+
 
 def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
     """" Uploads the chunks to mega.nz """
@@ -519,7 +377,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
                 break
             except IndexError:
                 chunk_resume = {
-                    "credentials": get_account(1, proxy),
+                    "credentials": create_acc.get(1, proxy),
                     "folder name": chunk["folder name"],
                     "uploaded files": []
                 }
@@ -557,7 +415,7 @@ def upload_chunks(chunks, dir_name, proxy):  # Proxy can be str or False
 
         # Folder path is with / instead of /Root because the export folder function
         # uses megacmd instead of megatools.
-        export_url = export_folder(user_name, password, f"/{folder_name}")
+        export_url = mega_export.export_folder(user_name, password, f"/{folder_name}")
         export_urls.append(export_url)
 
         # Write export url to resume file
@@ -755,7 +613,7 @@ def upload_manager(queue):
     print()
 
 
-UPLOAD_QUEUE = []  # To be downloaded
+upload_queue = []  # To be downloaded
 
 # Upload sub dirs
 if SCRIPT_ARGS.upload_subdirs:
@@ -765,23 +623,23 @@ if SCRIPT_ARGS.upload_subdirs:
         d_path = Path(folder)
 
         for sub_folder in listdir(d_path):  # Append target folders to upload list
-            UPLOAD_QUEUE.append(Path(d_path, sub_folder))
+            upload_queue.append(Path(d_path, sub_folder))
 
 # Upload multiple dirs
 elif SCRIPT_ARGS.upload_dirs:
     LOGGER.debug("Uploading multiple directories")
 
     for folder in SCRIPT_ARGS.upload_dirs:  # Append target folders to upload list
-        UPLOAD_QUEUE.append(folder)
+        upload_queue.append(folder)
 
 if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
-    upload_manager(UPLOAD_QUEUE)  # Start Upload process
+    upload_manager(upload_queue)  # Start Upload process
 
 # Keeps accounts active
 if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-write has been passed
     LOGGER.debug("Keeping accounts alive")
 
-    with open(account_file) as account_f:
+    with open(create_acc.account_file) as account_f:
         # Read accounts from file
         for file_line in account_f:
             line = file_line.strip("\n")
@@ -789,8 +647,6 @@ if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-
 
             # Log in and log out using megacmd
             LOGGER.info("Logging into: %s %s", usern, passwd)
-            logout()
-            login(usern, passwd)
-            logout()
+            mega_export.keep_alive(usern, passwd)
 
 LOGGER.info("Done")
