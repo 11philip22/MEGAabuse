@@ -1,10 +1,12 @@
 import logging
-from random import choice
-import guerrillamail
+import subprocess
 import time
+from random import choice
+
 from bs4 import BeautifulSoup
 from names import get_first_name
-import subprocess
+
+from . import guerrillamail
 
 """" Creates mega.nz accounts using guerrillamail """
 

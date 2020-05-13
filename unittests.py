@@ -1,8 +1,10 @@
+import sys
 import unittest
-from accountfactory import AccountFactory
 from os import path
 from pathlib import Path
-import sys
+
+from megaabuse import CreateAccount
+from megaabuse.accountfactory import AccountFactory
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
 BIN_PATH = Path(SCRIPT_DIR, "binaries")
@@ -20,6 +22,15 @@ class TestAccountFactory(unittest.TestCase):
     def test_account_creation(self):
         acc_fac = AccountFactory(MEGATOOLS_PATH)
         accounts = acc_fac.guerrilla_gen_bulk(1, False, False)
+
+        self.assertTrue(bool(accounts))
+
+
+class TestCreateAccount(unittest.TestCase):
+    def test_account_creation(self):
+        create_acc = CreateAccount(MEGATOOLS_PATH, Path(SCRIPT_DIR, "accounts.txt"), logger=None, write_files=False)
+        accounts = create_acc.get(1, False)
+
         self.assertTrue(bool(accounts))
 
 
