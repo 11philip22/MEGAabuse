@@ -1,10 +1,11 @@
 import atexit
+import json
 import logging
 import multiprocessing
 import re
 import subprocess
 import sys
-from os import linesep
+from os import linesep, path, walk
 from pathlib import Path
 
 from .accountfactory import AccountFactory
@@ -14,13 +15,13 @@ class CreateAccount(AccountFactory):
     # Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
     ACC_LOCK = multiprocessing.Lock()
 
-    def __init__(self, tools_path, file, logger=None, write_files=False):
+    def __init__(self, tools_path, *args, logger=None, write_files=False):
         super().__init__(tools_path, logger)
         self.output = write_files
 
         # Create accounts.txt
         if self.output:
-            self.account_file = Path(file)
+            self.account_file = Path(args[0])
             if not self.account_file.is_file():
                 self.account_file.touch()
 
@@ -127,3 +128,241 @@ class MegaCmd:
             self.logout()
             self.login(username, password)
             self.logout()
+
+
+class MegaAbuse(CreateAccount, MegaCmd):
+    # Counter for all the files being processed. Used for logging purposes.
+    total_files_count = multiprocessing.Value("i", 0)
+
+    def __init__(self, tools_path, cmd_path, *args, logger=None, write_files=False):
+        self.tools_path = Path(tools_path)
+        self.write_files = write_files
+
+        self.done = []
+
+        # Create resume dir
+        if self.write_files:
+
+            # Init CreateAccount with an accounts file
+            CreateAccount.__init__(
+                self,
+                tools_path,
+                args[1],
+                logger=logger,
+                write_files=write_files
+            )
+
+            # Resume file
+            self.resume_dir = Path(args[0])
+            if not self.resume_dir.is_dir():
+                self.resume_dir.mkdir()
+
+            # Read done file
+            self.done_file = Path(args[2])
+            if not self.done_file.is_file():
+                self.done_file.touch()
+            else:
+                with open(self.done_file) as f:
+                    self.done = [line.rstrip() for line in f]
+        else:
+
+            # Init CreateAccount without an accounts file
+            CreateAccount.__init__(
+                self,
+                tools_path,
+                logger=logger,
+                write_files=write_files
+            )
+
+        # If running on mac os init MegaCmd without a server path
+        if sys.platform == "darwin":
+            MegaCmd.__init__(
+                self,
+                cmd_path,
+                logger=logger
+            )
+        else:
+            # Init MegaCmd with server path
+            MegaCmd.__init__(
+                self,
+                cmd_path,
+                Path(args[3]),
+                logger=logger
+            )
+
+        # Create logger or sub logger for class
+        if logger is None:
+            self.logger = logging.getLogger("MegaAbuse")
+        else:
+            self.logger = logger
+
+    @staticmethod
+    def update_json_file(file, data):
+        """" Updates a json file with new data """
+        with open(file, "w") as json_file:
+            json.dump(data, json_file, indent=4)
+
+    def create_folder(self, user_name, password, folder_name, proxy=False):
+        """" Create a folder om a mega account """
+        self.logger.log(0, "Create folder function called")
+
+        cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
+        if proxy:
+            cmd += f" --proxy={proxy}"
+        self.logger.log(0, cmd)
+
+        subprocess.Popen(cmd, shell=True).wait()
+
+    def upload_file(self, username, password, remote_path, file_path, proxy=False):
+        """" Uploads a file to mega """
+        self.logger.log(0, "Upload file function called")
+
+        cmd = f"{self.tools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
+        if proxy:
+            cmd += f" --proxy={proxy}"
+        self.logger.log(0, cmd)
+
+        return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
+
+    def upload_chunks(self, chunks, dir_name, proxy):  # Proxy can be str or False
+        """" Uploads the chunks to mega.nz """
+        self.logger.log(0, "Upload chunks function called")
+
+        resume_data = []
+        if self.write_files:
+            # Create resume file
+            resume_file = Path(self.resume_dir, f"{dir_name}.json")
+            if not resume_file.is_file() and self.write_files:
+                resume_file.touch()
+
+            # Try to load data from resume file if fails create empty resume data var
+            with open(resume_file, "r+") as json_file:
+                try:
+                    resume_data = json.load(json_file)
+                except json.decoder.JSONDecodeError:
+                    pass
+
+        # The chunk we are working with
+        c_counter = 0
+        export_urls = []
+        for chunk in chunks:
+            # If chunk is not in resume data create it and try again
+            while True:
+                try:
+                    r_data = resume_data[c_counter]
+                    self.logger.debug("Found chunk in resume data %s", r_data)
+                    break
+                except IndexError:
+                    chunk_resume = {
+                        "credentials": super().get(1, proxy),
+                        "folder name": chunk["folder name"],
+                        "uploaded files": []
+                    }
+                    resume_data.append(chunk_resume)
+
+            credentials = resume_data[c_counter]["credentials"]
+            user_name = list(credentials.keys())[0]
+            password = credentials[user_name]
+
+            folder_name = resume_data[c_counter]["folder name"]
+            uploaded_files = resume_data[c_counter]["uploaded files"]
+
+            # Create folder
+            self.create_folder(user_name, password, f"/Root/{folder_name}", proxy)
+
+            for file in chunk["files"]:
+                if file not in uploaded_files:
+                    self.logger.info("Uploading: %s", file)
+
+                    file_path = Path(file)
+                    extension = file.split(".")[-1]
+                    file_name = f"{file_path.stem}.{extension}"
+
+                    # Returns True on a successful upload
+                    if self.upload_file(user_name, password, f"/Root/{folder_name}/{file_name}", file, proxy):
+
+                        # Update resume data
+                        uploaded_files.append(file)
+                        if self.write_files:
+                            self.update_json_file(resume_file, resume_data)
+                    else:
+                        self.logger.error("Error uploading: %s", file)
+                else:
+                    self.logger.info("Skipping: %s", file)
+
+            # Folder path is with / instead of /Root because the export folder function
+            # uses megacmd instead of megatools.
+            export_url = super().export_folder(user_name, password, f"/{folder_name}")
+            export_urls.append(export_url)
+
+            # Write export url to resume file
+            resume_data[c_counter].update({"export url": export_url})
+            if self.write_files:
+                self.update_json_file(resume_file, resume_data)
+
+            c_counter += 1
+        return export_urls
+
+    @staticmethod
+    def find_files(search_path, wrong_extensions: list):
+        """" Outputs a dict of all file paths and their sizes """
+        file_paths = {}
+        for root, _, files in walk(search_path):
+            files.sort()
+            for file in files:
+                extension = path.splitext(file)[1]
+                if extension not in wrong_extensions:
+                    file_path = path.join(root, file)
+                    file_paths.update({file_path: path.getsize(file_path)})
+        return file_paths
+
+    @staticmethod
+    def divide_files(paths: dict, max_size):  # Max size is in bits
+        """" Input is {path: size in bytes dict}.
+             divides files in lists of no more than 50GB """
+        file_chunks = []
+        file_list = []
+        chunk_size = 0
+        for file_path, size in paths.items():
+            if chunk_size + size > max_size:
+                file_chunks.append(file_list)
+                file_list = []
+                chunk_size = 0
+            chunk_size += size
+            file_list.append(file_path)
+        if file_list:
+            file_chunks.append(file_list)
+        return file_chunks
+
+    def upload_folder(self, folder_path, proxy=False):
+        """" Uploads a folder to mega.nz returns download urls """
+        self.logger.log(0, "Upload folder function called")
+
+        if folder_path in self.done and self.write_files:
+            self.logger.info("Skipping: %s", folder_path)
+            return []
+        self.logger.info("Uploading %s", folder_path)
+
+        paths = self.find_files(folder_path, [".json", ])
+        self.logger.info("%s: Found %s files", folder_path, len(paths))
+        self.total_files_count.value += len(paths)
+        file_lists = self.divide_files(paths, 15000000000)
+        folder_name = Path(folder_path).parts[-1]
+
+        chunks = []
+        # A chunk is a set of files that fits in a mega account (50GB)
+        for file_list in file_lists:
+            chunks.append({
+                "folder name": folder_name,
+                "files": file_list
+            })
+
+        self.logger.info("Uploading: %s chunks", len(chunks))
+        export_urls = self.upload_chunks(chunks, folder_name, proxy)
+
+        self.done.append(folder_path)
+        if self.write_files:
+            with open(self.done_file, "a") as file:
+                file.write(folder_path + linesep)
+
+        return export_urls
