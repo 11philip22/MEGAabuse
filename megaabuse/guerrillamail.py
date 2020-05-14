@@ -83,7 +83,7 @@ class Mail(object):
         }))
 
     def __init__(self, guid=None, subject=None, sender=None, datetime=None,
-        read=False, exerpt=None, excerpt=None, body=None):
+                 read=False, exerpt=None, excerpt=None, body=None):
         self.guid = guid
         self.subject = subject
         self.sender = sender
@@ -338,7 +338,7 @@ def cli(*args):
 
 
 def main():
-    print (str(cli(*sys.argv[1:])))
+    print(str(cli(*sys.argv[1:])))
 
 
 if __name__ == '__main__':

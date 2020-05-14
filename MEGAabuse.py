@@ -210,6 +210,7 @@ else:
 
 # Counter of all the active workers. Used for logging purposes.
 worker_count = multiprocessing.Value("i", 0)
+
 # Init main class
 ABUSE = MegaAbuse(
     MEGATOOLS_PATH,

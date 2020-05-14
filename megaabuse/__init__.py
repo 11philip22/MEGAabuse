@@ -226,10 +226,61 @@ class MegaCmd:
 
 
 class MegaAbuse(CreateAccount, MegaCmd):
-    # Counter for all the files being processed. Used for logging purposes.
+    """" The main class of MEGAabuse
+
+    Attributes
+    ----------
+    total_files_count : multiprocessing.sharedctypes.Synchronized
+        Counter for all the files being processed. Used for logging purposes.
+
+    Methods
+    -------
+    update_json_file(file, data)
+        Dumps json to file
+    create_folder(user_name, password, folder_name, proxy=False)
+        Creates a folder on a mega.nz drive
+    upload_file(username, password, remote_path, file_path, proxy=False)
+        Uploads a single file to mega.nz
+    upload_chunks(chunks, dir_name, proxy)
+        Uploads all files in the chunks prepared by upload_folder
+    find_files(search_path, wrong_extensions)
+        Finds all files in search path
+    divide_files(paths, max_size)
+        Divides files into groups of specified size
+    upload_folder(folder_path, proxy=False)
+        Main method. Uploads all files from a local folder to mega.nz
+
+    """
+
     total_files_count = multiprocessing.Value("i", 0)
 
     def __init__(self, tools_path, cmd_path, *args, logger=None, write_files=False):
+        """" Init function
+
+        Starts the mega cmd server on Windows and Linux. Mac os does not use the mega cmd server.
+        So it is unnecessary to pass the server path parameter on mac os.
+
+        Parameters
+        ----------
+        tools_path : str or pathlib.Path
+            Path to mega tools
+        cmd_path : str or pathlib.Path, optional
+            Path to mega cmd
+        resume_dir : str or pathlib.Path, optional
+            Path to resume dir
+        accounts_file : str or pathlib.Path, optional
+            Path to accounts file
+        done_file : str or pathlib.Path, optional
+            Path to done file
+        cmd_server_path : str or pathlib.Path, optional
+            Path to mega cmd server binary
+        logger : logger object, optional
+            Use this logger
+        write_files : bool, optional
+            To write files or not
+
+        """
+
         self.tools_path = Path(tools_path)
         self.write_files = write_files
 
@@ -257,8 +308,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
             if not self.done_file.is_file():
                 self.done_file.touch()
             else:
-                with open(self.done_file) as f:
-                    self.done = [line.rstrip() for line in f]
+                with open(self.done_file) as f_done:
+                    self.done = [line.rstrip() for line in f_done]
         else:
 
             # Init CreateAccount without an accounts file
