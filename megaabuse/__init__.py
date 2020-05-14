@@ -1,3 +1,9 @@
+"""" The megaabuse module
+
+This file contains the main classes of the module.
+
+"""
+
 import atexit
 import json
 import logging
@@ -12,10 +18,42 @@ from .accountfactory import AccountFactory
 
 
 class CreateAccount(AccountFactory):
+    """" A wrapper around AccountFactory
+
+    Used for locking threads because AccountFactory is not threadsafe.
+    used for writing accounts to file. (optional)
+
+    Attributes
+    ----------
+    ACC_LOCK : multiprocessing.Lock()
+        A lock used for locking the threadpool when generating accounts.
+
+    Methods
+    -------
+    get(amount, proxy=False)
+        Create mega.nz accounts using AccountFactory.guerrilla_gen_bulk
+
+    """
+
     # Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
     ACC_LOCK = multiprocessing.Lock()
 
     def __init__(self, tools_path, *args, logger=None, write_files=False):
+        """" Init function
+
+        Parameters
+        ----------
+        tools_path : str or pathlib.Path
+            Path to megatools
+        accounts_file : str or pathlib.Path, optional
+            Write generated accounts to this file
+        logger : logger object, optional
+            Use this logger
+        write_files : bool, optional
+            Write files or not
+
+        """
+
         super().__init__(tools_path, logger)
         self.output = write_files
 
@@ -27,7 +65,16 @@ class CreateAccount(AccountFactory):
 
     # todo: Support multiprocessing. confirm_command or something when you do two at once
     def get(self, amount, proxy=False):
-        """"" Wrapper for guerrilla_gen_bulk """
+        """"" Wrapper for guerrilla_gen_bulk
+
+        Parameters
+        ----------
+        amount : int
+            Amount of accounts to generate
+        proxy : str, optional
+            Use this proxy
+
+        """
 
         with self.ACC_LOCK:
             accounts = super().guerrilla_gen_bulk(amount, False, proxy)
@@ -41,11 +88,44 @@ class CreateAccount(AccountFactory):
 
 
 class MegaCmd:
+    """" A python wrapper around megacmd
+
+    Attributes
+    ----------
+    URL_REGEX : re.Pattern
+        Used for extracting mega export url from command output
+    LOCK : multiprocessing.lock
+        Used for locking the threadpool when exporting urls.
+        Necessary since megacmd only allows one account to be logged in at a certain time.
+
+    Methods
+    ------
+    logout()
+        Log out of mega.nz
+    login(username, password)
+        Logs in to mega.nz
+    export_folder(username, password, folder)
+        Returns the export url of a folder
+    """
+
     # Regex for extracting export url from export command output
     URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
     LOCK = multiprocessing.Lock()  # Used for locking the pool while exporting.
 
     def __init__(self, m_cmd_path, *args, logger=None):
+        """" Init function
+
+        Parameters
+        ----------
+        m_cmd_path : str or pathlib.Path
+            Path to mega cmd
+        server_path : str or pathlib.Path, optional
+            Path to mega cmd server
+        logger : logger object, optional
+            Use this logger
+
+        """
+
         # Create logger or sub logger for class
         if logger is None:
             logger_name = "MegaExport"
@@ -97,7 +177,22 @@ class MegaCmd:
         subprocess.Popen(cmd, shell=True, cwd=self.cmd_path).wait()
 
     def export_folder(self, username, password, folder_name):
-        """" Exports a folder """
+        """" Exports a folder
+
+        Parameters
+        ----------
+        username : str
+        password : str
+        folder_name : str
+            The root of megacmd is "/" don't confuse with megatools "/Root/"
+
+        Returns
+        -------
+        str
+            The export url of the exported folder
+
+        """
+
         self.logger.log(0, "Export function called")
 
         with self.LOCK:
@@ -319,7 +414,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
     @staticmethod
     def divide_files(paths: dict, max_size):  # Max size is in bits
         """" Input is {path: size in bytes dict}.
-             divides files in lists of no more than 50GB """
+             divides files in lists of no more than 15 GB """
         file_chunks = []
         file_list = []
         chunk_size = 0

@@ -15,7 +15,13 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""" Uploads files to MEGA. without limits (except speed lol) """
+"""" Uploads files to MEGA. without limits (except speed lol)
+
+This Part of the program mostly contains spaghetti code for passing
+the right parameters to the main class and managing the size of the
+threadpool depending how many proxies are being used. No proxies is 1 thread.
+
+"""
 
 import argparse
 import logging

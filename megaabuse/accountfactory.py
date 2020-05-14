@@ -1,3 +1,9 @@
+"""" The accountfactory sub module
+
+This file contains the class thaat creates mega.nz accounts using guerrillamail.
+
+"""
+
 import logging
 import subprocess
 import time
@@ -7,8 +13,6 @@ from bs4 import BeautifulSoup
 from names import get_first_name
 
 from . import guerrillamail
-
-"""" Creates mega.nz accounts using guerrillamail """
 
 
 class AccountFactory:
