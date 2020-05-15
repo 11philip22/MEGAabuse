@@ -26,6 +26,14 @@ class TestAccountFactory(unittest.TestCase):
 
         self.assertTrue(bool(accounts))
 
+    def test_account_creation_fixed_pass(self):
+        fixed_password = "Test1234Jdjskdmelsk88fd"
+
+        acc_fac = AccountFactory(MEGATOOLS_PATH)
+        accounts = acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
+        for username, password in accounts.items():
+            self.assertEqual(fixed_password, password)
+
 
 test_account = {}  # An mega.nz account used for testing
 
