@@ -1,8 +1,9 @@
-import atexit
+import re
 import sys
 import unittest
 from os import path, remove
 from pathlib import Path
+import subprocess
 
 from megaabuse import CreateAccount, MegaCmd
 from megaabuse.accountfactory import AccountFactory
@@ -18,11 +19,15 @@ else:
     MEGACMD_PATH = Path(BIN_PATH, "megacmd_linux")
     CMD_SERVER_PATH = Path(MEGACMD_PATH, "mega-cmd-server")
 
+test_account = {}  # An mega.nz account used for testing
+
 
 class TestAccountFactory(unittest.TestCase):
     def test_account_creation(self):
         acc_fac = AccountFactory(MEGATOOLS_PATH)
         accounts = acc_fac.guerrilla_gen_bulk(1, False, False)
+
+        test_account.update(accounts)
 
         self.assertTrue(bool(accounts))
 
@@ -31,17 +36,19 @@ class TestAccountFactory(unittest.TestCase):
 
         acc_fac = AccountFactory(MEGATOOLS_PATH)
         accounts = acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
+
+        test_account.update(accounts)
+
         for username, password in accounts.items():
             self.assertEqual(fixed_password, password)
-
-
-test_account = {}  # An mega.nz account used for testing
 
 
 class TestCreateAccount(unittest.TestCase):
     def test_account_creation_no_write(self):
         create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
         accounts = create_acc.get(1, False)
+
+        test_account.update(accounts)
 
         self.assertTrue(bool(accounts))
 
@@ -53,6 +60,7 @@ class TestCreateAccount(unittest.TestCase):
 
         create_acc = CreateAccount(MEGATOOLS_PATH, account_file, write_files=True)
         accounts = create_acc.get(1, False)
+
         test_account.update(accounts)  # Save account so later tests dont have to generate a new one
 
         self.assertTrue(bool(accounts))
@@ -90,10 +98,22 @@ class TestMegaCmd(unittest.TestCase):
         self.assertEqual(self.cmd.logout(), 0)
 
     def test_export(self):
-        pass
+        url_regex = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
-    def test_server_stop(self):
-        self.cmd.exit_handler()
+        test_file = Path(SCRIPT_DIR, "test.txt")
+        test_file.touch()
+
+        for username, password in test_account.items():
+            cmd = f"{MEGATOOLS_PATH} mkdir /Root/testfolder -u {username} -p {password}"
+            subprocess.Popen(cmd, shell=True).wait()
+
+            cmd = f"{MEGATOOLS_PATH} put -u {username} -p {password} --path /Root/testfolder/test.txt {test_file}"
+            subprocess.Popen(cmd, shell=True).wait()
+
+            export_url = self.cmd.export_folder(username, password, "/testfolder")
+            self.assertTrue(bool(url_regex.findall(export_url)))
+            break
+        remove(test_file)
 
 
 if __name__ == '__main__':
