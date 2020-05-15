@@ -61,6 +61,18 @@ class TestCreateAccount(unittest.TestCase):
         # Cleanup
         remove(account_file)
 
+    def test_total_accounts_counter(self):
+        create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
+
+        accounts = create_acc.get(1, False)
+        self.assertEqual(create_acc.total_accounts_created, 1)
+
+        accounts.update(create_acc.get(1, False))
+        self.assertEqual(create_acc.total_accounts_created, 2)
+
+        accounts.update(create_acc.get(3, False))
+        self.assertEqual(create_acc.total_accounts_created, 5)
+
 
 class TestMegaCmd(unittest.TestCase):
     cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
