@@ -1,9 +1,10 @@
+import atexit
 import sys
 import unittest
-from os import path
+from os import path, remove
 from pathlib import Path
 
-from megaabuse import CreateAccount
+from megaabuse import CreateAccount, MegaCmd
 from megaabuse.accountfactory import AccountFactory
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
@@ -26,12 +27,53 @@ class TestAccountFactory(unittest.TestCase):
         self.assertTrue(bool(accounts))
 
 
+test_account = {}  # An mega.nz account used for testing
+
+
 class TestCreateAccount(unittest.TestCase):
-    def test_account_creation(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH, Path(SCRIPT_DIR, "accounts.txt"), logger=None, write_files=False)
+    def test_account_creation_no_write(self):
+        create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
         accounts = create_acc.get(1, False)
 
         self.assertTrue(bool(accounts))
+
+    def test_account_creation_write(self):
+        account_file = Path(SCRIPT_DIR, "accounts.txt")
+
+        # Make sure accounts file is not already there so we can have a meaningful test
+        self.assertFalse(account_file.is_file())
+
+        create_acc = CreateAccount(MEGATOOLS_PATH, account_file, write_files=True)
+        accounts = create_acc.get(1, False)
+        test_account.update(accounts)  # Save account so later tests dont have to generate a new one
+
+        self.assertTrue(bool(accounts))
+        self.assertTrue(account_file.is_file())
+
+        # Cleanup
+        remove(account_file)
+
+
+class TestMegaCmd(unittest.TestCase):
+    cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
+
+    def test_server_init(self):
+        self.assertTrue(
+            bool(type(self.cmd.cmd_server_proc.pid) == int)
+        )
+
+    def test_login(self):
+        for user, passwd in test_account.items():
+            self.assertEqual(self.cmd.login(user, passwd), 0)
+
+    def test_logout(self):
+        self.assertEqual(self.cmd.logout(), 0)
+
+    def test_export(self):
+        pass
+
+    def test_server_stop(self):
+        self.cmd.exit_handler()
 
 
 if __name__ == '__main__':

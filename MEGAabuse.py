@@ -31,7 +31,7 @@ from operator import not_
 from os import linesep, listdir, path
 from pathlib import Path
 
-from megaabuse import CreateAccount, MegaAbuse
+from megaabuse import MegaAbuse
 from megaabuse.macqueue import Queue
 
 # Parse arguments
@@ -227,6 +227,7 @@ ABUSE = MegaAbuse(
 def worker(folder_path):
     """" This is actually just a wrapper around
          upload_folder to handle the proxies """
+
     worker_count.value += 1  # Add to active worker counter. Used for logging purposes.
     LOGGER.debug("Worker spawned. Total workers: %s", worker_count.value)
 
@@ -261,6 +262,7 @@ if not SCRIPT_ARGS.no_write:
 
 def urls_to_file(urls: list, folder_path):
     """" Write results to output file """
+
     LOGGER.log(0, "urls_to_file function called")
 
     LOGGER.debug("Writing to file")
@@ -275,6 +277,7 @@ def urls_to_file(urls: list, folder_path):
 
 def upload_manager(queue):
     """" Starts upload process and processes results """
+
     try:
         multiprocessing.freeze_support()  # todo: Does this do anything
         with multiprocessing.Pool(processes=THREADS) as pool:  # todo: Find fix for windows exe
@@ -331,10 +334,7 @@ if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
 if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-write has been passed
     LOGGER.debug("Keeping accounts alive")
 
-    CREATE_ACC = CreateAccount(MEGATOOLS_PATH, Path(SCRIPT_DIR, "accounts.txt"),
-                               logger=LOGGER, write_files=not_(SCRIPT_ARGS.no_write))
-
-    with open(CREATE_ACC.account_file) as account_f:
+    with open(ABUSE.account_file) as account_f:
         # Read accounts from file
         for file_line in account_f:
             line = file_line.strip("\n")

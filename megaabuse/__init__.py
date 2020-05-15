@@ -106,6 +106,7 @@ class MegaCmd:
         Logs in to mega.nz
     export_folder(username, password, folder)
         Returns the export url of a folder
+
     """
 
     # Regex for extracting export url from export command output
@@ -141,20 +142,20 @@ class MegaCmd:
             if not server_path.is_file():
                 raise FileNotFoundError("No megacmd found!")
 
-            cmd_server_proc = subprocess.Popen(
+            self.cmd_server_proc = subprocess.Popen(
                 str(server_path),
                 shell=True,
                 stdout=subprocess.PIPE,
                 cwd=self.cmd_path
             )
 
-            def exit_handler():
-                """"Stop MEGA cmd server when program exits"""
-                logging.debug("Killing MEGA cmd server")
-                if cmd_server_proc:
-                    cmd_server_proc.terminate()
+            atexit.register(self.exit_handler)
 
-            atexit.register(exit_handler)
+    def exit_handler(self):
+        """"Stop MEGA cmd server when program exits"""
+        logging.debug("Killing MEGA cmd server")
+        if self.cmd_server_proc:
+            self.cmd_server_proc.terminate()
 
     def logout(self):
         """" Logs out of megacmd """
@@ -164,7 +165,9 @@ class MegaCmd:
         cmd = str(cmd_path)
         self.logger.log(0, cmd)
 
-        subprocess.Popen(cmd, shell=True, cwd=self.cmd_path).wait()
+        proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
+        proc.wait()
+        return proc.returncode
 
     def login(self, username, password):
         """" Logs in to megacmd """
@@ -174,7 +177,9 @@ class MegaCmd:
         cmd = f"{cmd_path} \"{username}\" \"{password}\""
         self.logger.log(0, cmd)
 
-        subprocess.Popen(cmd, shell=True, cwd=self.cmd_path).wait()
+        proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
+        proc.wait()
+        return proc.returncode
 
     def export_folder(self, username, password, folder_name):
         """" Exports a folder
@@ -219,6 +224,7 @@ class MegaCmd:
         return url
 
     def keep_alive(self, username, password):
+        """""Logs in to an account to keep it active"""
         with self.LOCK:
             self.logout()
             self.login(username, password)
