@@ -116,5 +116,28 @@ class TestMegaCmd(unittest.TestCase):
         remove(test_file)
 
 
+class TestMegaAbuse(unittest.TestCase):
+    def test_update_json_file(self):
+        pass
+
+    def test_create_folder(self):
+        pass
+
+    def test_upload_file(self):
+        pass
+
+    def test_upload_chunks(self):
+        pass
+
+    def test_find_files(self):
+        pass
+
+    def test_devide_files(self):
+        pass
+
+    def upload_folder(self):
+        pass
+
+
 if __name__ == '__main__':
     unittest.main()
