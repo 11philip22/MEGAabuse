@@ -154,7 +154,7 @@ class CreateAccount(AccountFactory):
         amount : int
             Amount of accounts to generate
         proxy : str, optional
-            Use this proxy
+            Socks5 url
 
         """
 
@@ -437,7 +437,18 @@ class MegaAbuse(CreateAccount, MegaCmd):
             json.dump(data, json_file, indent=4)
 
     def create_folder(self, user_name, password, folder_name, proxy=False):
-        """" Create a folder om a mega account """
+        """" Create a folder om a mega account
+
+        Parameters
+        ----------
+        user_name : str
+        password : str
+        folder_name : str
+            Root is written as /Root/ instead of /
+        proxy : str, optional
+            Socks5 url
+
+        """
         self.logger.log(0, "Create folder function called")
 
         cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
@@ -448,7 +459,21 @@ class MegaAbuse(CreateAccount, MegaCmd):
         subprocess.Popen(cmd, shell=True).wait()
 
     def upload_file(self, username, password, remote_path, file_path, proxy=False):
-        """" Uploads a file to mega """
+        """" Uploads a file to mega
+
+        Parameters
+        ----------
+        username : str
+        password : str
+        remote_path : str
+            Target path on mega drive. Root is written as /Root/ instead of /
+        file_path : str or Path
+            path to local file to upload
+        proxy : str, optional
+            Socks5 url
+
+        """
+
         self.logger.log(0, "Upload file function called")
 
         cmd = f"{self.tools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
