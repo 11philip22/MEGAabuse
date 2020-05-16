@@ -19,7 +19,7 @@
 
 This Part of the program mostly contains spaghetti code for passing
 the right parameters to the main class and managing the size of the
-threadpool depending how many proxies are being used. No proxies is 1 thread.
+thread pool depending how many proxies are being used. No proxies is 1 thread.
 
 """
 
@@ -187,7 +187,7 @@ if not MEGATOOLS_PATH.is_file():
     raise FileNotFoundError("No megatools found!")
 
 # PROXY_STORE = multiprocessing.Queue()  # Available proxies
-PROXY_STORE = Queue()  # Available proxies
+proxy_store = Queue()  # Available proxies
 
 if SCRIPT_ARGS.proxy:
     # If --proxy is passed load proxies from proxy file
@@ -199,11 +199,11 @@ if SCRIPT_ARGS.proxy:
         for proxy_line in proxy_file:
             prox = proxy_line.strip("\n")
             LOGGER.debug("Loaded: %s", prox)
-            PROXY_STORE.put(prox)
-    LOGGER.info("%s proxies loaded", PROXY_STORE.qsize())
+            proxy_store.put(prox)
+    LOGGER.info("%s proxies loaded", proxy_store.qsize())
 
     # 1 thread for each proxy
-    THREADS = PROXY_STORE.qsize()
+    THREADS = proxy_store.qsize()
 else:
     # No proxies. Use 1 thread
     THREADS = 1
@@ -234,18 +234,18 @@ def worker(folder_path):
     proxy = False
     if SCRIPT_ARGS.proxy:
         # Get proxy
-        proxy = PROXY_STORE.get()
+        proxy = proxy_store.get()
         LOGGER.debug("Using proxy: %s", proxy)
-        LOGGER.debug("Proxies in store: %s", PROXY_STORE.qsize())
+        LOGGER.debug("Proxies in store: %s", proxy_store.qsize())
 
     exported_urls = ABUSE.upload_folder(folder_path, proxy)
     LOGGER.info("Done uploading: %s", folder_path)
 
     if SCRIPT_ARGS.proxy:
         # Return proxy
-        PROXY_STORE.put(proxy)
+        proxy_store.put(proxy)
         LOGGER.debug("Returning proxy: %s", proxy)
-        LOGGER.debug("Proxies in store: %s", PROXY_STORE.qsize())
+        LOGGER.debug("Proxies in store: %s", proxy_store.qsize())
 
     worker_count.value -= 1  # Subtract to active worker counter. Used for logging purposes.
     LOGGER.debug("Worker finished. Total workers: %s", worker_count.value)

@@ -449,6 +449,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
             Socks5 url
 
         """
+
         self.logger.log(0, "Create folder function called")
 
         cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
