@@ -17,6 +17,88 @@ from pathlib import Path
 from .accountfactory import AccountFactory
 
 
+def get_logger(name, *args, level=40, write=False):
+    """" Creates a logger.
+
+    If write is True a location must be passed as second argument.
+    If ran with only the name argument returns a logger without a file handler
+    and log level 40 (Warning).
+
+    Parameters
+    ----------
+    name : str
+        The name for the logger object.
+    args : str, optional
+        The location of the logging folder. Will be created if does not exists.
+    level : int, optional
+        Sets logger level.
+        0 : not set
+        10 : debug
+        20 : info
+        40 : error
+        anything else: critical
+    write : bool, optional
+        Write to file or not
+
+    Returns
+    -------
+    logger object
+
+    """
+
+    # Create logger
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    if write:  # Dont bother with log files if --no-write is passed
+        log_dir = args[0]
+        # Create logs folder
+        log_dir_path = Path(log_dir, "logs")
+        if not log_dir_path.is_dir():
+            log_dir_path.mkdir()
+
+        # Create log file
+        log_file = Path(log_dir_path, "log.txt")
+        # If log file exists rename old one before creating the file
+        if log_file.is_file():
+            count = 0
+            while True:
+                new_file_name = f"log.txt.{count}"
+                new_file_path = Path(log_dir_path, new_file_name)
+                if new_file_path.is_file():
+                    count += 1
+                else:
+                    log_file.rename(new_file_path)
+                    break
+        log_file.touch()
+
+        file_handler = logging.FileHandler(str(log_file))
+        if level == "vvv":  # Enable super verbose output
+            file_handler.setLevel(logging.NOTSET)
+        else:
+            file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler()
+    if level == 10:  # Enable debug mode
+        stream_handler.setLevel(logging.DEBUG)
+    elif level == 20:  # Enable console log output
+        stream_handler.setLevel(logging.INFO)
+    elif level == 0:  # Enable super verbose output
+        stream_handler.setLevel(logging.NOTSET)
+    elif level == 40:  # Enable error output
+        stream_handler.setLevel(logging.ERROR)
+    else:
+        stream_handler.setLevel(logging.CRITICAL)
+
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    return logger
+
+
 class CreateAccount(AccountFactory):
     """" A wrapper around AccountFactory
 
