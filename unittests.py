@@ -23,10 +23,11 @@ test_account = {}  # An mega.nz account used for testing
 
 
 class TestAccountFactory(unittest.TestCase):
-    def test_account_creation(self):
-        acc_fac = AccountFactory(MEGATOOLS_PATH)
-        accounts = acc_fac.guerrilla_gen_bulk(1, False, False)
+    def setUp(self):
+        self.acc_fac = AccountFactory(MEGATOOLS_PATH)
 
+    def test_account_creation(self):
+        accounts = self.acc_fac.guerrilla_gen_bulk(1, False, False)
         test_account.update(accounts)
 
         self.assertTrue(bool(accounts))
@@ -34,9 +35,7 @@ class TestAccountFactory(unittest.TestCase):
     def test_account_creation_fixed_pass(self):
         fixed_password = "Test1234Jdjskdmelsk88fd"
 
-        acc_fac = AccountFactory(MEGATOOLS_PATH)
-        accounts = acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
-
+        accounts = self.acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
         test_account.update(accounts)
 
         for username, password in accounts.items():
@@ -44,6 +43,17 @@ class TestAccountFactory(unittest.TestCase):
 
 
 class TestCreateAccount(unittest.TestCase):
+    def setUp(self):
+        self.account_file = Path(SCRIPT_DIR, "accounts.txt")
+        # Make sure accounts file is not already there so we can have a meaningful test
+        self.assertFalse(self.account_file.is_file())
+
+    def tearDown(self):
+        try:  # Cleanup
+            remove(self.account_file)
+        except FileNotFoundError:
+            pass
+
     def test_account_creation_no_write(self):
         create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
         accounts = create_acc.get(1, False)
@@ -51,23 +61,16 @@ class TestCreateAccount(unittest.TestCase):
         test_account.update(accounts)
 
         self.assertTrue(bool(accounts))
+        self.assertFalse(self.account_file.is_file())
 
     def test_account_creation_write(self):
-        account_file = Path(SCRIPT_DIR, "accounts.txt")
-
-        # Make sure accounts file is not already there so we can have a meaningful test
-        self.assertFalse(account_file.is_file())
-
-        create_acc = CreateAccount(MEGATOOLS_PATH, account_file, write_files=True)
+        create_acc = CreateAccount(MEGATOOLS_PATH, self.account_file, write_files=True)
         accounts = create_acc.get(1, False)
 
         test_account.update(accounts)  # Save account so later tests dont have to generate a new one
 
         self.assertTrue(bool(accounts))
-        self.assertTrue(account_file.is_file())
-
-        # Cleanup
-        remove(account_file)
+        self.assertTrue(self.account_file.is_file())
 
     def test_total_accounts_counter(self):
         create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
@@ -75,15 +78,13 @@ class TestCreateAccount(unittest.TestCase):
         accounts = create_acc.get(1, False)
         self.assertEqual(create_acc.total_accounts_created, 1)
 
-        accounts.update(create_acc.get(1, False))
-        self.assertEqual(create_acc.total_accounts_created, 2)
-
-        accounts.update(create_acc.get(3, False))
-        self.assertEqual(create_acc.total_accounts_created, 5)
+        accounts.update(create_acc.get(2, False))
+        self.assertEqual(create_acc.total_accounts_created, 3)
 
 
 class TestMegaCmd(unittest.TestCase):
-    cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
+    def setUp(self):
+        self.cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
 
     def test_server_init(self):
         self.assertTrue(
@@ -91,10 +92,13 @@ class TestMegaCmd(unittest.TestCase):
         )
 
     def test_login(self):
+        self.assertEqual(self.cmd.logout(), 0)
         for user, passwd in test_account.items():
             self.assertEqual(self.cmd.login(user, passwd), 0)
 
     def test_logout(self):
+        for user, passwd in test_account.items():
+            self.assertEqual(self.cmd.login(user, passwd), 0)
         self.assertEqual(self.cmd.logout(), 0)
 
     def test_export(self):

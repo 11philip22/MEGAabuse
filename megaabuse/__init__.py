@@ -28,7 +28,7 @@ def get_logger(name, *args, level=40, write=False):
     ----------
     name : str
         The name for the logger object.
-    args : str, optional
+    log_dir : str, optional
         The location of the logging folder. Will be created if does not exists.
     level : int, optional
         Sets logger level.
@@ -52,9 +52,8 @@ def get_logger(name, *args, level=40, write=False):
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     if write:  # Dont bother with log files if --no-write is passed
-        log_dir = args[0]
         # Create logs folder
-        log_dir_path = Path(log_dir, "logs")
+        log_dir_path = Path(args[0])
         if not log_dir_path.is_dir():
             log_dir_path.mkdir()
 

@@ -24,14 +24,13 @@ thread pool depending how many proxies are being used. No proxies is 1 thread.
 """
 
 import argparse
-import logging
 import multiprocessing
 import sys
 from operator import not_
 from os import linesep, listdir, path
 from pathlib import Path
 
-from megaabuse import MegaAbuse
+from megaabuse import MegaAbuse, get_logger
 from megaabuse.macqueue import Queue
 
 # Parse arguments
@@ -113,52 +112,22 @@ if getattr(sys, "frozen", False):
 else:
     SCRIPT_DIR = path.dirname(path.realpath(__file__))
 
-# Create logger
-LOGGER = logging.getLogger('MEGAabuse')
-LOGGER.setLevel(logging.DEBUG)
-FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-if not SCRIPT_ARGS.no_write:  # Dont bother with log files if --no-write is passed
-    # Create logs folder
-    LOG_DIR = Path(SCRIPT_DIR, "logs")
-    if not LOG_DIR.is_dir():
-        LOG_DIR.mkdir()
-
-    # Create log file
-    LOG_FILE = Path(LOG_DIR, "log.txt")
-    # If log file exists rename old one before creating the file
-    if LOG_FILE.is_file():
-        count = 0
-        while True:
-            new_file_name = f"log.txt.{count}"
-            new_file_path = Path(LOG_DIR, new_file_name)
-            if new_file_path.is_file():
-                count += 1
-            else:
-                LOG_FILE.rename(new_file_path)
-                break
-    LOG_FILE.touch()
-
-    FILE_HANDLER = logging.FileHandler(str(LOG_FILE))
-    if SCRIPT_ARGS.vvv:  # Enable super verbose output
-        FILE_HANDLER.setLevel(logging.NOTSET)
-    else:
-        FILE_HANDLER.setLevel(logging.DEBUG)
-    FILE_HANDLER.setFormatter(FORMATTER)
-    LOGGER.addHandler(FILE_HANDLER)
-
-STREAM_HANDLER = logging.StreamHandler()
 if SCRIPT_ARGS.vv:  # Enable debug mode
-    STREAM_HANDLER.setLevel(logging.DEBUG)
+    level = 10
 elif SCRIPT_ARGS.v:  # Enable console log output
-    STREAM_HANDLER.setLevel(logging.INFO)
+    level = 20
 elif SCRIPT_ARGS.vvv:  # Enable super verbose output
-    STREAM_HANDLER.setLevel(logging.NOTSET)
+    level = 0
 else:
-    STREAM_HANDLER.setLevel(logging.ERROR)
+    level = 40
 
-STREAM_HANDLER.setFormatter(FORMATTER)
-LOGGER.addHandler(STREAM_HANDLER)
+# Get a logger
+LOGGER = get_logger(
+    "MEGAabuse",
+    Path(SCRIPT_DIR, "logs"),
+    level=level,
+    write=not_(SCRIPT_ARGS.no_write)
+)
 
 if SCRIPT_ARGS.keep_alive and SCRIPT_ARGS.no_write:  # These two options are not compatible and keep_alive will not run
     LOGGER.warning("keep alive will not be performed since MEGAabuse is not reading or writing any files")
