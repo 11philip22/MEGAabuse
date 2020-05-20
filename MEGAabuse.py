@@ -246,15 +246,8 @@ def urls_to_file(urls: list, folder_path):
 
 def upload_manager(queue):
     """" Starts upload process and processes results """
-
-    try:
-        multiprocessing.freeze_support()  # todo: Does this do anything
-        with multiprocessing.Pool(processes=THREADS) as pool:  # todo: Find fix for windows exe
-            results = pool.map(worker, queue)  # Map pool to upload queue
-    except RuntimeError as exc:
-        traceback = sys.exc_info()[2]
-        LOGGER.error(exc.with_traceback(traceback))
-        return
+    with multiprocessing.Pool(processes=THREADS) as pool:
+        results = pool.map(worker, queue)  # Map pool to upload queue
 
     all_export_urls = {}
     for res in results:
@@ -277,40 +270,50 @@ def upload_manager(queue):
     print()
 
 
-upload_queue = []  # To be downloaded
+if __name__ == "__main__":
+    """ For Windows multiprocessing
+    https://stackoverflow.com/a/18205006/11783384
+    On Windows the subprocesses will import (i.e. execute) the main module at start. 
+    You need to insert an if __name__ == '__main__': guard in the main module to 
+    avoid creating subprocesses recursively.
+    """
 
-# Upload sub dirs
-if SCRIPT_ARGS.upload_subdirs:
-    LOGGER.debug("Uploading sub-directories")
+    multiprocessing.freeze_support()
 
-    for folder in SCRIPT_ARGS.upload_subdirs:
-        d_path = Path(folder)
+    upload_queue = []  # To be downloaded
 
-        for sub_folder in listdir(d_path):  # Append target folders to upload list
-            upload_queue.append(Path(d_path, sub_folder))
+    # Upload sub dirs
+    if SCRIPT_ARGS.upload_subdirs:
+        LOGGER.debug("Uploading sub-directories")
 
-# Upload multiple dirs
-elif SCRIPT_ARGS.upload_dirs:
-    LOGGER.debug("Uploading multiple directories")
+        for folder in SCRIPT_ARGS.upload_subdirs:
+            d_path = Path(folder)
 
-    for folder in SCRIPT_ARGS.upload_dirs:  # Append target folders to upload list
-        upload_queue.append(folder)
+            for sub_folder in listdir(d_path):  # Append target folders to upload list
+                upload_queue.append(Path(d_path, sub_folder))
 
-if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
-    upload_manager(upload_queue)  # Start Upload process
+    # Upload multiple dirs
+    elif SCRIPT_ARGS.upload_dirs:
+        LOGGER.debug("Uploading multiple directories")
 
-# Keeps accounts active
-if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-write has been passed
-    LOGGER.debug("Keeping accounts alive")
+        for folder in SCRIPT_ARGS.upload_dirs:  # Append target folders to upload list
+            upload_queue.append(folder)
 
-    with open(ABUSE.account_file) as account_f:
-        # Read accounts from file
-        for file_line in account_f:
-            line = file_line.strip("\n")
-            usern, passwd = line.split(";")
+    if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
+        upload_manager(upload_queue)  # Start Upload process
 
-            # Log in and log out using megacmd
-            LOGGER.info("Logging into: %s %s", usern, passwd)
-            ABUSE.keep_alive(usern, passwd)
+    # Keeps accounts active
+    if SCRIPT_ARGS.keep_alive and not SCRIPT_ARGS.no_write:  # Does not run if --no-write has been passed
+        LOGGER.debug("Keeping accounts alive")
+
+        with open(ABUSE.account_file) as account_f:
+            # Read accounts from file
+            for file_line in account_f:
+                line = file_line.strip("\n")
+                usern, passwd = line.split(";")
+
+                # Log in and log out using megacmd
+                LOGGER.info("Logging into: %s %s", usern, passwd)
+                ABUSE.keep_alive(usern, passwd)
 
 LOGGER.info("Done")
