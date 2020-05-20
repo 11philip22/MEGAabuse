@@ -271,11 +271,9 @@ def upload_manager(queue):
 
 
 if __name__ == "__main__":
-    """ For Windows multiprocessing
-    https://stackoverflow.com/a/18205006/11783384
-    On Windows the subprocesses will import (i.e. execute) the main module at start. 
-    You need to insert an if __name__ == '__main__': guard in the main module to 
-    avoid creating subprocesses recursively.
+    """
+    On Windows multiprocessing.Pool.map will import the main module at start.
+    This if statement is to avoid the pool being mapped recursively.
     """
 
     multiprocessing.freeze_support()
