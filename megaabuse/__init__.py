@@ -476,7 +476,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
         self.logger.log(0, "Upload file function called")
 
-        cmd = f"{self.tools_path} put -u {username} -p {password} --path {remote_path} {file_path}"
+        cmd = f"{self.tools_path} put -u {username} -p {password} --path \"{remote_path}\" \"{file_path}\""
         if proxy:
             cmd += f" --proxy={proxy}"
         self.logger.log(0, cmd)
