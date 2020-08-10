@@ -23,6 +23,7 @@ thread pool depending how many proxies are being used. No proxies is 1 thread.
 
 """
 
+import json
 import argparse
 import multiprocessing
 import sys
@@ -222,11 +223,16 @@ def worker(folder_path):
     return {folder_path: exported_urls}
 
 
-# Create output file
 if not SCRIPT_ARGS.no_write:
+    # Create output file
     OUTPUT_FILE = Path(SCRIPT_DIR, "out.txt")
     if not OUTPUT_FILE.is_file():
         OUTPUT_FILE.touch()
+
+    # Create json output file
+    JSON_OUTPUT_FILE = Path(SCRIPT_DIR, "out.json")
+    if not JSON_OUTPUT_FILE.is_file():
+        JSON_OUTPUT_FILE.touch()
 
 
 def urls_to_file(urls: list, folder_path):
@@ -236,12 +242,24 @@ def urls_to_file(urls: list, folder_path):
 
     LOGGER.debug("Writing to file")
 
+    # Write to outfile
     with open(OUTPUT_FILE, "a") as out_file:
         out_file.write(folder_path + linesep)
         for url in urls:
             LOGGER.debug("Writing to results file: %s", url)
             out_file.write(url + linesep)
         out_file.write(linesep)
+
+    # Write to json out
+    out_data = {}
+    with open(JSON_OUTPUT_FILE, "r+") as json_file:
+        try:
+            out_data = json.load(json_file)
+        except json.decoder.JSONDecodeError:
+            pass
+
+    out_data.update({folder_path: urls})
+    ABUSE.update_json_file(JSON_OUTPUT_FILE, out_data)
 
 
 def upload_manager(queue):

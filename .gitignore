@@ -6,5 +6,6 @@ binaries/megacmd_windows/.megaCmd/
 accounts.txt
 done.txt
 out.txt
+out.json
 proxies.txt
 docker-compose.yml
