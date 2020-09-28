@@ -174,6 +174,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
     ----------
     total_files_count : multiprocessing.sharedctypes.Synchronized
         Counter for all the files being processed. Used for logging purposes.
+    ignore_done : bool
+        if done.txt should be ignored or not
 
     Methods
     -------
@@ -195,6 +197,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
     """
 
     total_files_count = multiprocessing.Value("i", 0)
+    ignore_done = False
 
     def __init__(self, tools_path, cmd_path, *args, logger=None, write_files=False):
         """" Init function
@@ -451,10 +454,10 @@ class MegaAbuse(CreateAccount, MegaCmd):
     def upload_folder(self, folder_path, proxy=False):
         """" Uploads a folder to mega.nz returns download urls """
         self.logger.log(0, "Upload folder function called")
-
-        if folder_path in self.done and self.write_files:
-            self.logger.info("Skipping: %s", folder_path)
-            return []
+        if not self.ignore_done:
+            if folder_path in self.done and self.write_files:
+                self.logger.info("Skipping: %s", folder_path)
+                return []
         self.logger.info("Uploading %s", folder_path)
 
         paths = self.find_files(folder_path, [".json", ])

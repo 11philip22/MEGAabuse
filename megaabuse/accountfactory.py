@@ -98,7 +98,12 @@ class AccountFactory:
         for address in email_pass_pairs:
             address = address[0:30]
             guerrillamail.cli("setaddr", address)
-            mail_id = self.guerrilla_wait_for_mail()[6:15]
+            while True:
+                mail_id = self.guerrilla_wait_for_mail()[6:15]
+                if not mail_id:
+                    self.logger.info("Retrying")
+                else:
+                    break
             mail_str = str(guerrillamail.cli("get", mail_id))
             current_link = self.extract_url(mail_str)
             current_email = address + "@guerrillamailblock.com"

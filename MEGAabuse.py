@@ -95,6 +95,12 @@ PARSER.add_argument(
     action="store_true",
     help="Use socks5 proxies defined in proxy.txt"
 )
+PARSER.add_argument(
+    "-o", "--overwrite",
+    required=False,
+    action="store_true",
+    help="Overwrite resume file. This will do an upload from scratch"
+)
 
 SCRIPT_ARGS = PARSER.parse_args()
 # Exit if help argument has been passed.
@@ -297,6 +303,11 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
 
     upload_queue = []  # To be downloaded
+
+    # todo: -o for overwrite
+    if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
+        if SCRIPT_ARGS.overwrite:
+            pass
 
     # Upload sub dirs
     if SCRIPT_ARGS.upload_subdirs:

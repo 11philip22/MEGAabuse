@@ -19,7 +19,6 @@ class Selenium:
         self.driver.set_window_size(1288, 744)
 
     def login(self, username, password):
-        self.driver.delete_all_cookies()
 
         self.driver.get("https://mega.nz/start")
 
@@ -41,6 +40,11 @@ class Selenium:
         WebDriverWait(self.driver, 30).until(
             ec.visibility_of_element_located((By.CSS_SELECTOR, "#onboarding-dialog-add-contacts > .close-button")))
         self.driver.find_element(By.CSS_SELECTOR, "#onboarding-dialog-add-contacts > .close-button").click()
+
+    def logout(self):
+        self.driver.find_element(By.CSS_SELECTOR, ".top-icon:nth-child(6)").click()
+        self.driver.find_element(By.CSS_SELECTOR, ".top-white-button").click()
+        self.driver.find_element(By.CSS_SELECTOR, ".button-prd-skip > span").click()
 
     def import_(self, url):
         self.driver.get(url)

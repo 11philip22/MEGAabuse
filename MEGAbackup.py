@@ -80,6 +80,7 @@ for folder, urls in OUT_DATA.items():
 
         SEL.login(username, password)
         SEL.import_(url)
+        SEL.logout()
         export_url = CMD.export_folder(username, password, f"/{folder_name}")
         print(url)
         print(export_url)
