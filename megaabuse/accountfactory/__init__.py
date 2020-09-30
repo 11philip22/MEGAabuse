@@ -12,7 +12,7 @@ from random import choice
 from bs4 import BeautifulSoup
 from names import get_first_name
 
-from megaabuse.accountfactory import guerrillamail
+from . import guerrillamail
 
 
 class AccountFactory:

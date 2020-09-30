@@ -12,7 +12,7 @@ import sys
 from os import linesep, path, walk
 from pathlib import Path
 
-from .accountfactory import AccountFactory
+from .accountfactory import GuerrillaGen
 from .megacmd import MegaCmd
 
 
@@ -97,7 +97,7 @@ def get_logger(name, *args, level=40, write=False):
     return logger
 
 
-class CreateAccount(AccountFactory):
+class CreateAccount(GuerrillaGen):
     """" A wrapper around AccountFactory
 
     Used for locking threads because AccountFactory is not threadsafe.
