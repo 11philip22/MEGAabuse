@@ -1,6 +1,7 @@
 """" The accountfactory sub module
 
-This file contains the class thaat creates mega.nz accounts using guerrillamail.
+This file contains the classes that create mega.nz accounts.
+The Currently supported methods are: Guerrillamail
 
 """
 
@@ -11,12 +12,23 @@ from random import choice
 
 from bs4 import BeautifulSoup
 from names import get_first_name
+import mariadb
 
 from . import guerrillamail
 
 
 class AccountFactory:
-    """" Creates mega.nz accounts using guerrillamail """
+    """" baseclass
+
+    To be inherited bt all account generating classes
+    to avoid writing double functions
+
+    Attributes
+    ----------
+    total_accounts_created : int
+        The amount of accounts that is created during an instance
+
+    """
 
     total_accounts_created = 0  # Total accounts created
 
@@ -51,7 +63,38 @@ class AccountFactory:
         return None
 
 
+class IGenMail(AccountFactory):
+    """"Creates mega.nz accounts using iRedMail's api
+
+    This is designed to work with mariadb.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.conn = None
+
+    def connect_to_db(self, host, user, password, port=3306, db="vmail"):
+        try:
+            self.conn = mariadb.connect(
+                user=user,
+                password=password,
+                host=host,
+                port=port,
+                database=db
+            )
+        except Exception as e:
+            self.logger.error(e)
+
+    def create_user(self, username, password):
+        storage_base_dir = "/var/vmail/vmail1"
+        storage_base=
+
+
 class GuerrillaGen(AccountFactory):
+    """" Creates mega.nz accounts using guerrillamail """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 
 from megaabuse import CreateAccount, MegaCmd
-from megaabuse.accountfactory import GuerrillaGen
+from megaabuse.accountfactory import GuerrillaGen, IGenMail
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
 BIN_PATH = Path(SCRIPT_DIR, "binaries")
@@ -22,6 +22,20 @@ else:
 test_account = {}  # An mega.nz account used for testing
 
 
+class TestIGenMail(unittest.TestCase):
+    def setUp(self):
+        self.acc_fac = IGenMail(MEGATOOLS_PATH)
+
+    def test_db_connection(self):
+        self.acc_fac.connect_to_db(
+            host="mail.bok-bright.com",
+            user="root",
+            password="df29ySQLadm3737d4ba00c79cet"
+        )
+
+        self.assertTrue(bool(self.acc_fac.conn.server_info == "10.3.22-MariaDB-1ubuntu1"))
+
+
 class TestGuerrillaGen(unittest.TestCase):
     def setUp(self):
         self.acc_fac = GuerrillaGen(MEGATOOLS_PATH)
@@ -29,6 +43,7 @@ class TestGuerrillaGen(unittest.TestCase):
     def test_account_creation(self):
         accounts = self.acc_fac.guerrilla_gen_bulk(1, False, False)
         test_account.update(accounts)
+        print(test_account)
 
         self.assertTrue(bool(accounts))
 
@@ -37,6 +52,7 @@ class TestGuerrillaGen(unittest.TestCase):
 
         accounts = self.acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
         test_account.update(accounts)
+        print(test_account)
 
         for username, password in accounts.items():
             self.assertEqual(fixed_password, password)
