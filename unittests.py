@@ -35,6 +35,15 @@ class TestIGenMail(unittest.TestCase):
 
         self.assertTrue(bool(self.acc_fac.conn.server_info == "10.3.22-MariaDB-1ubuntu1"))
 
+    def test_encode(self):
+        string = "hoi"
+        encoded_str = self.acc_fac.encode(string)
+        print(encoded_str)
+
+        self.assertTrue(len(encoded_str) == 117)
+
+    # def test_create_user
+
 
 class TestGuerrillaGen(unittest.TestCase):
     def setUp(self):
@@ -104,7 +113,7 @@ class TestMegaCmd(unittest.TestCase):
 
     def test_server_init(self):
         self.assertTrue(
-            bool(type(self.cmd.cmd_server_proc.pid) == int)
+            type(self.cmd.cmd_server_proc.pid) == int
         )
 
     def test_login(self):

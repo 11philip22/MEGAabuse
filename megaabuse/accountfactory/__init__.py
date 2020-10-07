@@ -13,8 +13,11 @@ from random import choice
 from bs4 import BeautifulSoup
 from names import get_first_name
 import mariadb
+from pathlib import Path
+from datetime import datetime
 
 from . import guerrillamail
+from .dov_ssha512 import DovecotSSHA512Hasher
 
 
 class AccountFactory:
@@ -63,7 +66,7 @@ class AccountFactory:
         return None
 
 
-class IGenMail(AccountFactory):
+class IGenMail(AccountFactory, DovecotSSHA512Hasher):
     """"Creates mega.nz accounts using iRedMail's api
 
     This is designed to work with mariadb.
@@ -72,6 +75,7 @@ class IGenMail(AccountFactory):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        super(DovecotSSHA512Hasher, self).__init__(prefix='{SSHA512}')
 
         self.conn = None
 
@@ -84,12 +88,38 @@ class IGenMail(AccountFactory):
                 port=port,
                 database=db
             )
+            return True
         except Exception as e:
             self.logger.error(e)
+            return False
 
-    def create_user(self, username, password):
+    def create_user(self, email, password):
+        if self.conn is None:
+            self.logger.error("Can't create user! Not connected to db")
+            return False
+
         storage_base_dir = "/var/vmail/vmail1"
-        storage_base=
+        storage_base = Path(storage_base_dir).parent
+        storage_node = Path(storage_base_dir).name
+        crypt_password = self.encode(password)
+        s_uname = email.split("@")
+        user_name = s_uname[0]
+        domain = s_uname[1]
+
+        now = datetime.now()
+        dt_str = now.strftime("%Y.%m.%d.%H.%M.%S")
+
+        mail_dir = f"{domain}/{email[0]}/{email[1]}/{email[2]}/{email}-{dt_str}"
+
+        cursor = self.conn.cursor()
+        cursor.execute("""INSERT INTO mailbox (username, password, name, 
+                                               storagebasedirectory,storagenode, maildir, 
+                                               quota, domain, active, passwordlastchange, created) 
+                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())""",
+                       (email, crypt_password, user_name, storage_base, storage_node, mail_dir, "1024", domain, 1))
+        cursor.execute("""INSERT INTO forwardings (address, forwarding, domain, dest_domain, is_forwarding)
+                                           VALUES (?, ?, ?, ?, 1)""",
+                       (email, email, domain, domain))
 
 
 class GuerrillaGen(AccountFactory):
