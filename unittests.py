@@ -42,7 +42,13 @@ class TestIGenMail(unittest.TestCase):
 
         self.assertTrue(len(encoded_str) == 117)
 
-    # def test_create_user
+    def test_create_user(self):
+        self.test_db_connection()
+
+        mail = "testdsadsa@bok-bright.com"
+        pw = "hoi123456"
+
+        self.acc_fac.create_mail_user(mail, pw)
 
 
 class TestGuerrillaGen(unittest.TestCase):

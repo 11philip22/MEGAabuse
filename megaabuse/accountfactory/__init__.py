@@ -67,7 +67,7 @@ class AccountFactory:
 
 
 class IGenMail(AccountFactory, DovecotSSHA512Hasher):
-    """"Creates mega.nz accounts using iRedMail's api
+    """"Creates mega.nz accounts using iRedMail
 
     This is designed to work with mariadb.
 
@@ -80,6 +80,8 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         self.conn = None
 
     def connect_to_db(self, host, user, password, port=3306, db="vmail"):
+        """" Connects to DB """
+
         try:
             self.conn = mariadb.connect(
                 user=user,
@@ -88,19 +90,22 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
                 port=port,
                 database=db
             )
+            self.conn.autocommit = False
             return True
         except Exception as e:
             self.logger.error(e)
             return False
 
-    def create_user(self, email, password):
+    def create_mail_user(self, email, password):
+        """" Creates a new mail user """
+
         if self.conn is None:
             self.logger.error("Can't create user! Not connected to db")
             return False
 
         storage_base_dir = "/var/vmail/vmail1"
-        storage_base = Path(storage_base_dir).parent
-        storage_node = Path(storage_base_dir).name
+        storage_base = str(Path(storage_base_dir).parent)
+        storage_node = str(Path(storage_base_dir).name)
         crypt_password = self.encode(password)
         s_uname = email.split("@")
         user_name = s_uname[0]
@@ -111,15 +116,21 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
 
         mail_dir = f"{domain}/{email[0]}/{email[1]}/{email[2]}/{email}-{dt_str}"
 
-        cursor = self.conn.cursor()
-        cursor.execute("""INSERT INTO mailbox (username, password, name, 
-                                               storagebasedirectory,storagenode, maildir, 
-                                               quota, domain, active, passwordlastchange, created) 
-                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())""",
-                       (email, crypt_password, user_name, storage_base, storage_node, mail_dir, "1024", domain, 1))
-        cursor.execute("""INSERT INTO forwardings (address, forwarding, domain, dest_domain, is_forwarding)
-                                           VALUES (?, ?, ?, ?, 1)""",
-                       (email, email, domain, domain))
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""INSERT INTO mailbox (username, password, name, 
+                                                   storagebasedirectory,storagenode, maildir, 
+                                                   quota, domain, active, passwordlastchange, created) 
+                                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW());""",
+                           (email, crypt_password, user_name, storage_base, storage_node, mail_dir, "1024", domain, 1))
+            cursor.execute("""INSERT INTO forwardings (address, forwarding, domain, dest_domain, is_forwarding)
+                                               VALUES (?, ?, ?, ?, 1);""",
+                           (email, email, domain, domain))
+            self.conn.commit()
+            return True
+        except mariadb.Error as e:
+            self.logger.error(e)
+            return False
 
 
 class GuerrillaGen(AccountFactory):
