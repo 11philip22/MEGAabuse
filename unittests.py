@@ -48,7 +48,9 @@ class TestIGenMail(unittest.TestCase):
         mail = "testdsadsa@bok-bright.com"
         pw = "hoi123456"
 
-        self.acc_fac.create_mail_user(mail, pw)
+        # self.acc_fac.create_mail_user(mail, pw)
+
+        self.acc_fac.delete_mail_user(mail)
 
 
 class TestGuerrillaGen(unittest.TestCase):

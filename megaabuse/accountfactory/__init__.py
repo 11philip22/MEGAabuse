@@ -132,6 +132,12 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             self.logger.error(e)
             return False
 
+    def delete_mail_user(self, email):
+        cursor = self.conn.cursor()
+        cursor.execute(f"DELETE FROM mailbox WHERE username = '{email}';")
+        cursor.execute(f"DELETE FROM forwardings WHERE address = '{email}';")
+        self.conn.commit()
+
 
 class GuerrillaGen(AccountFactory):
     """" Creates mega.nz accounts using guerrillamail """
