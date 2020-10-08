@@ -169,26 +169,33 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
 
         confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
         confirm_text = confirm_text[confirm_text.find("-"):]
-        email_code_pair = {email: confirm_text}
-        email_pass_pair = {email: email_password}
         self.logger.info("Done registering")
 
         # Wait for mail
         while True:
-            server = imaplib.IMAP4_SSL(imap_address)
-            if not server.login(email, email_password)[0] == "OK":
+            imap = imaplib.IMAP4_SSL(imap_address)
+            if not imap.login(email, email_password)[0] == "OK":
                 self.logger.error("Could not login to the mailserver")
                 return False, False
 
-            server.select("inbox")
+            imap.select("inbox")
 
-            welcome_mail = server.search(None, "FROM", '"welcome@mega.nz"')[1]
+            welcome_mail = imap.search(None, "FROM", '"welcome@mega.nz"')[1]
             if welcome_mail == [b'']:
-                server.close()
+                imap.close()
                 continue
             else:
                 self.logger.info("Got mail")
                 break
+
+        data = imap.search(None, "FROM", '"welcome@mega.nz"')[1]
+        typ, data = imap.fetch(data[0], '(RFC822)')
+        raw_email = data[0][1]
+        raw_email_string = raw_email.decode('utf-8')
+        confirm_url = self.extract_url(raw_email_string)
+
+        confirm_command = f"{self.megareg_dir} {confirm_text.replace('@LINK@', confirm_url)}"
+        subprocess.check_output(confirm_command, shell=True)
 
         return email, email_password
 
