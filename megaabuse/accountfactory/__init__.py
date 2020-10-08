@@ -5,17 +5,19 @@ The Currently supported methods are: Guerrillamail
 
 """
 
+import imaplib
 import logging
+import re
 import subprocess
 import time
-from random import choice
-import imaplib
-from bs4 import BeautifulSoup
-from names import get_first_name
-import mariadb
-from pathlib import Path
 from datetime import datetime
-import re
+from pathlib import Path
+from random import choice
+
+import mariadb
+# from bs4 import BeautifulSoup
+from names import get_first_name
+
 from . import guerrillamail
 from .dov_ssha512 import DovecotSSHA512Hasher
 
@@ -153,6 +155,17 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         except mariadb.Error as e:
             self.logger.error(e)
             return False
+
+    def cleanup_users(self, domain):
+        """" Deletes all users except for postmaster """
+        cursor = self.conn.cursor()
+        username = f"postmaster@{domain}"
+        cursor.execute(
+            f"""DELETE FROM mailbox WHERE NOT username=?;
+                DELETE FROM forwardings WHERE NOT address=?;""",
+            (username, username)
+        )
+        self.conn.commit()
 
     def create_mega_account(self, domain, imap_address, fixed_pass, proxy):
         self.logger.info("Registering accounts")
