@@ -23,6 +23,8 @@ test_account = {}  # An mega.nz account used for testing
 
 
 class TestIGenMail(unittest.TestCase):
+    domain = "bok-bright.com"
+
     def setUp(self):
         self.acc_fac = IGenMail(MEGATOOLS_PATH)
 
@@ -42,15 +44,42 @@ class TestIGenMail(unittest.TestCase):
 
         self.assertTrue(len(encoded_str) == 117)
 
-    def test_create_user(self):
+    def test_create_mail_user(self):
         self.test_db_connection()
 
-        mail = "testdsadsa@bok-bright.com"
+        mail = f"{self.acc_fac.random_mail()}@{self.domain}"
+        print(f"Email: {mail}")
         pw = "hoi123456"
 
-        # self.acc_fac.create_mail_user(mail, pw)
+        # Create email
+        self.acc_fac.create_mail_user(mail, pw)
+        # Check if created in db
+        cur = self.acc_fac.conn.cursor()
+        cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
+        res = cur.fetchall()
+        # Check against results from db
+        self.assertTrue(res[0][0] == mail)
+        self.assertTrue(res[0][1] == mail.split("@")[0])
 
+        # Remove email
         self.acc_fac.delete_mail_user(mail)
+        # Check if removed from db
+        cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
+        res = cur.fetchall()
+        self.assertTrue(res == [])
+
+    def test_create_mega_account(self):
+        self.test_db_connection()
+
+        mail, email_pw = self.acc_fac.create_mega_account(self.domain, f"mail.{self.domain}", False, False)
+
+        cur = self.acc_fac.conn.cursor()
+        # Remove email
+        self.acc_fac.delete_mail_user(mail)
+        # Check if removed from db
+        cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
+        res = cur.fetchall()
+        self.assertTrue(res == [])
 
 
 class TestGuerrillaGen(unittest.TestCase):

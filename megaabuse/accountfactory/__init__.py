@@ -9,7 +9,7 @@ import logging
 import subprocess
 import time
 from random import choice
-
+import imaplib
 from bs4 import BeautifulSoup
 from names import get_first_name
 import mariadb
@@ -97,7 +97,13 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             return False
 
     def create_mail_user(self, email, password):
-        """" Creates a new mail user """
+        """" Creates a new mail user
+
+        Cleanup ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓ DELETE ALL USERS EXCEPT POSTMASTER
+        DELETE FROM mailbox WHERE NOT username = 'postmaster@domain.com';
+        DELETE FROM forwardings WHERE NOT address =  'postmaster@domain.com';
+
+        """
 
         if self.conn is None:
             self.logger.error("Can't create user! Not connected to db")
@@ -133,10 +139,58 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             return False
 
     def delete_mail_user(self, email):
-        cursor = self.conn.cursor()
-        cursor.execute(f"DELETE FROM mailbox WHERE username = '{email}';")
-        cursor.execute(f"DELETE FROM forwardings WHERE address = '{email}';")
-        self.conn.commit()
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("DELETE FROM mailbox WHERE username=?;", (email,))
+            cursor.execute("DELETE FROM forwardings WHERE address=?;", (email,))
+            self.conn.commit()
+            return True
+        except mariadb.Error as e:
+            self.logger.error(e)
+            return False
+
+    def create_mega_account(self, domain, imap_address, fixed_pass, proxy):
+        self.logger.info("Registering accounts")
+
+        email = f"{self.random_mail()}@{domain}"
+        name = get_first_name()
+
+        if fixed_pass:
+            email_password = fixed_pass
+        else:
+            email_password = self.random_text(21)
+
+        self.create_mail_user(email, email_password)
+
+        cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
+        if proxy:
+            cmd += f" --proxy={proxy}"
+        self.logger.log(0, cmd)
+
+        confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
+        confirm_text = confirm_text[confirm_text.find("-"):]
+        email_code_pair = {email: confirm_text}
+        email_pass_pair = {email: email_password}
+        self.logger.info("Done registering")
+
+        # Wait for mail
+        while True:
+            server = imaplib.IMAP4_SSL(imap_address)
+            if not server.login(email, email_password)[0] == "OK":
+                self.logger.error("Could not login to the mailserver")
+                return False, False
+
+            server.select("inbox")
+
+            welcome_mail = server.search(None, "FROM", '"welcome@mega.nz"')[1]
+            if welcome_mail == [b'']:
+                server.close()
+                continue
+            else:
+                self.logger.info("Got mail")
+                break
+
+        return email, email_password
 
 
 class GuerrillaGen(AccountFactory):
