@@ -15,7 +15,7 @@ from names import get_first_name
 import mariadb
 from pathlib import Path
 from datetime import datetime
-
+import re
 from . import guerrillamail
 from .dov_ssha512 import DovecotSSHA512Hasher
 
@@ -34,6 +34,8 @@ class AccountFactory:
     """
 
     total_accounts_created = 0  # Total accounts created
+    URL_REGEX = re.compile(
+        "https://mega.nz/#confirm(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
     def __init__(self, tools_path, logger=None):
         self.megareg_dir = f"{tools_path} reg"
@@ -56,13 +58,16 @@ class AccountFactory:
         """" Returns a 30 character string """
         return ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(30)])
 
-    @staticmethod
-    def extract_url(mail_str):
+    def extract_url(self, mail_str):
         """" Extracts url from mail """
-        soup = BeautifulSoup(mail_str, "html.parser")
-        for link in soup.findAll("a"):
-            if link.get("href") is not None and "#confirm" in link.get("href"):
-                return link.get("href").replace('3D"', "").replace('"', "")
+        url = self.URL_REGEX.findall(mail_str)[0]
+        if url:
+            return url
+
+        # soup = BeautifulSoup(mail_str, "html.parser")
+        # for link in soup.findAll("a"):
+        #     if link.get("href") is not None and "#confirm" in link.get("href"):
+        #         return link.get("href").replace('3D"', "").replace('"', "")
         return None
 
 
