@@ -153,9 +153,7 @@ class TestMegaCmd(unittest.TestCase):
         self.cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
 
     def test_server_init(self):
-        self.assertTrue(
-            type(self.cmd.cmd_server_proc.pid) == int
-        )
+        self.assertEqual(type(self.cmd.cmd_server_proc.pid), int)
 
     def test_login(self):
         self.assertEqual(self.cmd.logout(), 0)

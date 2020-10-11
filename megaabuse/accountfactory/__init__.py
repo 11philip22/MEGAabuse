@@ -36,7 +36,7 @@ class AccountFactory:
     """
 
     total_accounts_created = 0  # Total accounts created
-    URL_REGEX = re.compile(
+    URL_REGEX = re.compile(  # todo: write regegex that only grabs the first link
         "https://mega.nz/#confirm(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
     def __init__(self, tools_path, logger=None):
@@ -110,6 +110,10 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         DELETE FROM mailbox WHERE NOT username = 'postmaster@domain.com';
         DELETE FROM forwardings WHERE NOT address =  'postmaster@domain.com';
 
+        Delete every user except postmaster ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+        DELETE FROM mailbox WHERE NOT username = 'postmaster@domain.com';
+        DELETE FROM forwardings WHERE NOT address =  'postmaster@domain.com';
+
         """
 
         if self.conn is None:
@@ -119,12 +123,12 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         storage_base_dir = "/var/vmail/vmail1"
         storage_base = str(Path(storage_base_dir).parent)
         storage_node = str(Path(storage_base_dir).name)
-        crypt_password = self.encode(password)
+        crypt_password = self.encode(password)  # Encode password to SSHA512 in dovecot format
         s_uname = email.split("@")
         user_name = s_uname[0]
         domain = s_uname[1]
 
-        now = datetime.now()
+        now = datetime.now()  # Get current timestamp
         dt_str = now.strftime("%Y.%m.%d.%H.%M.%S")
 
         mail_dir = f"{domain}/{email[0]}/{email[1]}/{email[2]}/{email}-{dt_str}"
@@ -146,6 +150,7 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             return False
 
     def delete_mail_user(self, email):
+        """" Delete mail user """
         try:
             cursor = self.conn.cursor()
             cursor.execute("DELETE FROM mailbox WHERE username=?;", (email,))
@@ -168,6 +173,12 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         self.conn.commit()
 
     def create_mega_account(self, domain, imap_address, fixed_pass, proxy):
+        """" Create a mega.nz account using iGenMail
+
+        Designed to work with maria DB. Adjustments need to be made to make it work with postgresql
+        but the sql statements are the same.
+
+        """
         self.logger.info("Registering accounts")
 
         email = f"{self.random_mail()}@{domain}"
@@ -178,8 +189,9 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         else:
             email_password = self.random_text(21)
 
-        self.create_mail_user(email, email_password)
+        self.create_mail_user(email, email_password)  # Create an mail user
 
+        # Register new mega account
         cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
         if proxy:
             cmd += f" --proxy={proxy}"
@@ -193,13 +205,13 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         while True:
             imap = imaplib.IMAP4_SSL(imap_address)
             if not imap.login(email, email_password)[0] == "OK":
-                self.logger.error("Could not login to the mailserver")
+                self.logger.error("Could not login to the mail server")
                 return False, False
 
             imap.select("inbox")
 
             welcome_mail = imap.search(None, "FROM", '"welcome@mega.nz"')[1]
-            if welcome_mail == [b'']:
+            if welcome_mail == [b'']:  # If mailbox contains no mail
                 imap.close()
                 continue
             else:
@@ -210,8 +222,9 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         typ, data = imap.fetch(data[0], '(RFC822)')
         raw_email = data[0][1]
         raw_email_string = raw_email.decode('utf-8')
-        confirm_url = self.extract_url(raw_email_string)
+        confirm_url = self.extract_url(raw_email_string)  # Extract confirm url from mail
 
+        # Confirm new account
         confirm_command = f"{self.megareg_dir} {confirm_text.replace('@LINK@', confirm_url)}"
         subprocess.check_output(confirm_command, shell=True)
 
