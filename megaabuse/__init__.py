@@ -262,7 +262,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
         #         mega_tools_path=kwargs["mega_tools_path"],
         #         logger=logger
         #     )
-        # CreateAccount.__init__(self, **kwargs)
+        CreateAccount.__init__(self, **kwargs)
 
         # # If running on mac os init MegaCmd without a server path
         # if sys.platform == "darwin":
@@ -279,9 +279,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
         #         cmd_server_path=Path(kwargs["cmd_server_path"]),
         #         logger=logger
         #     )
-        # MegaCmd.__init__(self, **kwargs)
-
-        super().__init__(**kwargs)
+        MegaCmd.__init__(self, **kwargs)
 
         # Create logger or sub logger for class
         if logger is None:
@@ -373,7 +371,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
                     break
                 except IndexError:
                     chunk_resume = {
-                        "credentials": self.get(1, proxy),
+                        "credentials": super().get(1, proxy),
                         "folder name": chunk["folder name"],
                         "uploaded files": []
                     }
@@ -411,7 +409,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
             # Folder path is with / instead of /Root because the export folder function
             # uses megacmd instead of megatools.
-            export_url = self.export_folder(user_name, password, f"/{folder_name}")
+            export_url = super().export_folder(user_name, password, f"/{folder_name}")
             export_urls.append(export_url)
 
             # Write export url to resume file
