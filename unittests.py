@@ -4,8 +4,9 @@ import unittest
 from os import path, remove
 from pathlib import Path
 import subprocess
+from pathlib import Path
 
-from megaabuse import CreateAccount, MegaCmd
+from megaabuse import CreateAccount, MegaCmd, MegaAbuse
 from megaabuse.accountfactory import GuerrillaGen, IGenMail
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
@@ -121,7 +122,7 @@ class TestCreateAccount(unittest.TestCase):
             pass
 
     def test_account_creation_no_write(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
+        create_acc = CreateAccount(MEGATOOLS_PATH)
         accounts = create_acc.get(1, False)
 
         test_account.update(accounts)
@@ -130,7 +131,7 @@ class TestCreateAccount(unittest.TestCase):
         self.assertFalse(self.account_file.is_file())
 
     def test_account_creation_write(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH, self.account_file, write_files=True)
+        create_acc = CreateAccount(MEGATOOLS_PATH, accounts_file=self.account_file)
         accounts = create_acc.get(1, False)
 
         test_account.update(accounts)  # Save account so later tests dont have to generate a new one
@@ -139,7 +140,7 @@ class TestCreateAccount(unittest.TestCase):
         self.assertTrue(self.account_file.is_file())
 
     def test_total_accounts_counter(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH, write_files=False)
+        create_acc = CreateAccount(MEGATOOLS_PATH)
 
         accounts = create_acc.get(1, False)
         self.assertEqual(create_acc.total_accounts_created, 1)
@@ -150,7 +151,10 @@ class TestCreateAccount(unittest.TestCase):
 
 class TestMegaCmd(unittest.TestCase):
     def setUp(self):
-        self.cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
+        self.cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
+
+        # Make sure there are users to run tests on
+        self.assertTrue(bool(test_account))
 
     def test_server_init(self):
         self.assertEqual(type(self.cmd.cmd_server_proc.pid), int)
@@ -179,12 +183,42 @@ class TestMegaCmd(unittest.TestCase):
             subprocess.Popen(cmd, shell=True).wait()
 
             export_url = self.cmd.export_folder(username, password, "/testfolder")
+            print(f"Export url: {export_url}")
             self.assertTrue(bool(url_regex.findall(export_url)))
             break
         remove(test_file)
 
 
 class TestMegaAbuse(unittest.TestCase):
+    def setUp(self):
+        self.test_files = {}
+        self.test_files_no_json = {}
+
+        # Create folder for test files
+        self.test_folder = Path(SCRIPT_DIR, "testdata")
+        if not self.test_folder.is_dir():
+            self.test_folder.mkdir()
+
+        # Create test files
+        for extension in [".jpg", ".mp4", ".json"]:
+            for num in range(1, 11):
+                file_type = (extension == ".jpg" and "photo") or (extension == ".mp4" and "video") or "json"
+                file = Path(SCRIPT_DIR, self.test_folder, f"test{file_type}{num}{extension}")
+
+                self.test_files.update({str(file): 15728640})
+                if not extension == ".json":
+                    self.test_files_no_json.update({str(file): 15728640})
+
+                if not file.is_file():
+                    with open(file, "wb") as test_file:
+                        test_file.seek(15728640-1)
+                        test_file.write(b"\0")
+
+        self.abuse = MegaAbuse(MEGATOOLS_PATH, MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
+
+    def tearDown(self):
+        pass
+
     def test_update_json_file(self):
         pass
 
@@ -198,9 +232,10 @@ class TestMegaAbuse(unittest.TestCase):
         pass
 
     def test_find_files(self):
-        pass
+        self.assertEqual(self.abuse.find_files(Path(self.test_folder), []), self.test_files)
+        self.assertEqual(self.abuse.find_files(Path(self.test_folder), [".json", ]), self.test_files_no_json)
 
-    def test_devide_files(self):
+    def test_divide_files(self):
         pass
 
     def upload_folder(self):

@@ -30,10 +30,10 @@ class MegaCmd:
     """
 
     # Regex for extracting export url from export command output
-    URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+    # URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
     LOCK = multiprocessing.Lock()  # Used for locking the pool while exporting.
 
-    def __init__(self, m_cmd_path, *args, logger=None):
+    def __init__(self, **kwargs):
         """" Init function
 
         Parameters
@@ -48,17 +48,17 @@ class MegaCmd:
         """
 
         # Create logger or sub logger for class
-        if logger is None:
+        if "logger" not in kwargs:
             logger_name = "MegaExport"
         else:
-            logger_name = f"{logger.name}.MegaExport"
+            logger_name = f"{kwargs['logger']}.MegaExport"
         self.logger = logging.getLogger(logger_name)
 
-        self.cmd_path = Path(m_cmd_path)
+        self.cmd_path = Path(kwargs["mega_cmd_path"])
 
         # Start MEGA cmd server
         if sys.platform == "linux" or sys.platform == "win32":
-            server_path = Path(args[0])
+            server_path = Path(kwargs["cmd_server_path"])
 
             if not server_path.is_file():
                 raise FileNotFoundError("No megacmd found!")
@@ -140,7 +140,11 @@ class MegaCmd:
         std_out_text = output[0].decode("utf-8")
 
         # Return url
-        url = self.URL_REGEX.findall(std_out_text)[0]
+        # url = self.URL_REGEX.findall(std_out_text)[0]
+        url = re.search(  # todo: find out what the fuck happened here
+            "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+            std_out_text
+        ).group()
         self.logger.info("Exported: %s", url)
         return url
 

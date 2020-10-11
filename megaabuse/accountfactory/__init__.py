@@ -39,14 +39,14 @@ class AccountFactory:
     URL_REGEX = re.compile(  # todo: write regegex that only grabs the first link
         "https://mega.nz/#confirm(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
-    def __init__(self, tools_path, logger=None):
-        self.megareg_dir = f"{tools_path} reg"
+    def __init__(self, **kwargs):
+        self.megareg_dir = f"{kwargs['mega_tools_path']} reg"
 
         # Create logger or sub logger for class
-        if logger is None:
+        if "logger" not in kwargs:
             logger_name = "AccountFactory"
         else:
-            logger_name = f"{logger.name}.AccountFactory"
+            logger_name = f"{kwargs['logger'].name}.AccountFactory"
         self.logger = logging.getLogger(logger_name)
 
     @staticmethod

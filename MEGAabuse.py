@@ -189,12 +189,12 @@ worker_count = multiprocessing.Value("i", 0)
 
 # Init main class
 ABUSE = MegaAbuse(
-    MEGATOOLS_PATH,
-    MEGACMD_PATH,
-    Path(SCRIPT_DIR, "resume"),        # Optional
-    Path(SCRIPT_DIR, "accounts.txt"),  # Optional
-    Path(SCRIPT_DIR, "done.txt"),      # Optional
-    CMD_SERVER_PATH,                   # Optional
+    mega_tools_path=MEGATOOLS_PATH,
+    mega_cmd_path=MEGACMD_PATH,
+    resume_dir=Path(SCRIPT_DIR, "resume"),          # Optional
+    accounts_file=Path(SCRIPT_DIR, "accounts.txt"),  # Optional
+    done_file=Path(SCRIPT_DIR, "done.txt"),          # Optional
+    cmd_server_path=CMD_SERVER_PATH,                 # Optional
     logger=LOGGER,
     write_files=not_(SCRIPT_ARGS.no_write)
 )

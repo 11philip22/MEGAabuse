@@ -118,12 +118,12 @@ class CreateAccount(GuerrillaGen):
     # Lock used for locking the pool when creating an account at the moment accounts can nut be created simultaneously
     ACC_LOCK = multiprocessing.Lock()
 
-    def __init__(self, tools_path, *args, logger=None, write_files=False):
+    def __init__(self, **kwargs):
         """" Init function
 
         Parameters
         ----------
-        tools_path : str or pathlib.Path
+        mega_tools_path : str or pathlib.Path
             Path to megatools
         accounts_file : str or pathlib.Path, optional
             Write generated accounts to this file
@@ -134,12 +134,12 @@ class CreateAccount(GuerrillaGen):
 
         """
 
-        super().__init__(tools_path, logger)
-        self.output = write_files
+        super().__init__(**kwargs)
+        self.output = True if "accounts_file" in kwargs else False
 
         # Create accounts.txt
         if self.output:
-            self.account_file = Path(args[0])
+            self.account_file = Path(kwargs["accounts_file"])
             if not self.account_file.is_file():
                 self.account_file.touch()
 
@@ -157,7 +157,7 @@ class CreateAccount(GuerrillaGen):
         """
 
         with self.ACC_LOCK:
-            accounts = super().guerrilla_gen_bulk(amount, False, proxy)
+            accounts = self.guerrilla_gen_bulk(amount, False, proxy)
 
         # Write credentials to file
         if self.output:
@@ -199,7 +199,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
     total_files_count = multiprocessing.Value("i", 0)
     ignore_done = False
 
-    def __init__(self, tools_path, cmd_path, *args, logger=None, write_files=False):
+    def __init__(self, logger=None, write_files=False, **kwargs):
         """" Init function
 
         Starts the mega cmd server on Windows and Linux. Mac os does not use the mega cmd server.
@@ -226,7 +226,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
         """
 
-        self.tools_path = Path(tools_path)
+        self.tools_path = Path(kwargs["mega_tools_path"])
         self.write_files = write_files
 
         self.done = []
@@ -234,52 +234,52 @@ class MegaAbuse(CreateAccount, MegaCmd):
         # Create resume dir
         if self.write_files:
 
-            # Init CreateAccount with an accounts file
-            CreateAccount.__init__(
-                self,
-                tools_path,
-                args[1],
-                logger=logger,
-                write_files=write_files
-            )
+            # # Init CreateAccount with an accounts file
+            # CreateAccount.__init__(
+            #     self,
+            #     mega_tools_path=kwargs["mega_tools_path"],
+            #     accounts_file=kwargs["accounts_file"],
+            #     logger=logger
+            # )
 
             # Resume file
-            self.resume_dir = Path(args[0])
+            self.resume_dir = Path(kwargs["resume_dir"])
             if not self.resume_dir.is_dir():
                 self.resume_dir.mkdir()
 
             # Read done file
-            self.done_file = Path(args[2])
+            self.done_file = Path(kwargs["done_file"])
             if not self.done_file.is_file():
                 self.done_file.touch()
             else:
                 with open(self.done_file) as f_done:
                     self.done = [line.rstrip() for line in f_done]
-        else:
+        # else:
+        #
+        #     # Init CreateAccount without an accounts file
+        #     CreateAccount.__init__(
+        #         self,
+        #         mega_tools_path=kwargs["mega_tools_path"],
+        #         logger=logger
+        #     )
+        CreateAccount.__init__(self, **kwargs)
 
-            # Init CreateAccount without an accounts file
-            CreateAccount.__init__(
-                self,
-                tools_path,
-                logger=logger,
-                write_files=write_files
-            )
-
-        # If running on mac os init MegaCmd without a server path
-        if sys.platform == "darwin":
-            MegaCmd.__init__(
-                self,
-                cmd_path,
-                logger=logger
-            )
-        else:
-            # Init MegaCmd with server path
-            MegaCmd.__init__(
-                self,
-                cmd_path,
-                Path(args[3]),
-                logger=logger
-            )
+        # # If running on mac os init MegaCmd without a server path
+        # if sys.platform == "darwin":
+        #     MegaCmd.__init__(
+        #         self,
+        #         cmd_path,
+        #         logger=logger
+        #     )
+        # else:
+        #     # Init MegaCmd with server path
+        #     MegaCmd.__init__(
+        #         self,
+        #         cmd_path,
+        #         cmd_server_path=Path(kwargs["cmd_server_path"]),
+        #         logger=logger
+        #     )
+        MegaCmd.__init__(self, **kwargs)
 
         # Create logger or sub logger for class
         if logger is None:
@@ -482,4 +482,5 @@ class MegaAbuse(CreateAccount, MegaCmd):
             with open(self.done_file, "a") as file:
                 file.write(folder_path + linesep)
 
+        self.logger.debug("Export urls: %s", export_urls)
         return export_urls
