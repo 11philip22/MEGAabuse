@@ -1,10 +1,10 @@
 """" Code taken from: https://github.com/ioparaskev """
 
-from hmac import compare_digest as constant_time_compare
 import base64
-from hashlib import sha512
-import os
 import binascii
+import os
+from hashlib import sha512
+from hmac import compare_digest as constant_time_compare
 
 
 class SSHA512Hasher:

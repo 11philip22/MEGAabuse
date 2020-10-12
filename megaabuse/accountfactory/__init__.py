@@ -80,8 +80,8 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super(DovecotSSHA512Hasher, self).__init__(prefix='{SSHA512}')
 
         self.conn = None
@@ -234,8 +234,8 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
 class GuerrillaGen(AccountFactory):
     """" Creates mega.nz accounts using guerrillamail """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def guerrilla_wait_for_mail(self):
         """" Wait for welcome mail """

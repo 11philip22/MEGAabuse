@@ -295,7 +295,7 @@ def upload_manager(queue):
 
 
 if __name__ == "__main__":
-    """
+    """" Init
     On Windows multiprocessing.Pool.map will import the main module at start.
     This if statement is to avoid the pool being mapped recursively.
     """

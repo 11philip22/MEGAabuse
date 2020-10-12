@@ -2,7 +2,6 @@ import re
 import sys
 import unittest
 from os import path, remove
-from pathlib import Path
 import subprocess
 from pathlib import Path
 
@@ -20,15 +19,13 @@ else:
     MEGACMD_PATH = Path(BIN_PATH, "megacmd_linux")
     CMD_SERVER_PATH = Path(MEGACMD_PATH, "mega-cmd-server")
 
-test_account = {}  # An mega.nz account used for testing
-
 
 class TestIGenMail(unittest.TestCase):
     domain = "bok-bright.com"
     test_emails = []
 
     def setUp(self):
-        self.acc_fac = IGenMail(MEGATOOLS_PATH)
+        self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
 
     def tearDown(self):
         for mail in self.test_emails:
@@ -81,7 +78,7 @@ class TestIGenMail(unittest.TestCase):
         self.test_emails.append(mail)
         print(f"Email: {mail}\nPassword: {email_pw}")
 
-        cmd = MegaCmd(MEGACMD_PATH, CMD_SERVER_PATH)
+        cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
         self.assertEqual(cmd.logout(), 0)
         self.assertEqual(cmd.login(mail, email_pw), 0)
         self.assertEqual(cmd.logout(), 0)
@@ -89,12 +86,11 @@ class TestIGenMail(unittest.TestCase):
 
 class TestGuerrillaGen(unittest.TestCase):
     def setUp(self):
-        self.acc_fac = GuerrillaGen(MEGATOOLS_PATH)
+        self.acc_fac = GuerrillaGen(mega_tools_path=MEGATOOLS_PATH)
 
     def test_account_creation(self):
         accounts = self.acc_fac.guerrilla_gen_bulk(1, False, False)
-        test_account.update(accounts)
-        print(test_account)
+        print(f"Created accounts: {accounts}")
 
         self.assertTrue(bool(accounts))
 
@@ -102,8 +98,7 @@ class TestGuerrillaGen(unittest.TestCase):
         fixed_password = "Test1234Jdjskdmelsk88fd"
 
         accounts = self.acc_fac.guerrilla_gen_bulk(1, fixed_password, False)
-        test_account.update(accounts)
-        print(test_account)
+        print(f"Created accounts: {accounts}")
 
         for username, password in accounts.items():
             self.assertEqual(fixed_password, password)
@@ -122,25 +117,25 @@ class TestCreateAccount(unittest.TestCase):
             pass
 
     def test_account_creation_no_write(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH)
+        create_acc = CreateAccount(mega_tools_path=MEGATOOLS_PATH)
         accounts = create_acc.get(1, False)
 
-        test_account.update(accounts)
+        print(f"Created accounts: {accounts}")
 
         self.assertTrue(bool(accounts))
         self.assertFalse(self.account_file.is_file())
 
     def test_account_creation_write(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH, accounts_file=self.account_file)
+        create_acc = CreateAccount(mega_tools_path=MEGATOOLS_PATH, accounts_file=self.account_file)
         accounts = create_acc.get(1, False)
 
-        test_account.update(accounts)  # Save account so later tests dont have to generate a new one
+        print(f"Created accounts: {accounts}")
 
         self.assertTrue(bool(accounts))
         self.assertTrue(self.account_file.is_file())
 
     def test_total_accounts_counter(self):
-        create_acc = CreateAccount(MEGATOOLS_PATH)
+        create_acc = CreateAccount(mega_tools_path=MEGATOOLS_PATH)
 
         accounts = create_acc.get(1, False)
         self.assertEqual(create_acc.total_accounts_created, 1)
@@ -150,22 +145,25 @@ class TestCreateAccount(unittest.TestCase):
 
 
 class TestMegaCmd(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestMegaCmd, self).__init__(*args, **kwargs)
+
+        acc_fac = GuerrillaGen(mega_tools_path=MEGATOOLS_PATH)
+        self.test_accounts = acc_fac.guerrilla_gen_bulk(1, False, False)
+
     def setUp(self):
         self.cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
-
-        # Make sure there are users to run tests on
-        self.assertTrue(bool(test_account))
 
     def test_server_init(self):
         self.assertEqual(type(self.cmd.cmd_server_proc.pid), int)
 
     def test_login(self):
         self.assertEqual(self.cmd.logout(), 0)
-        for user, passwd in test_account.items():
+        for user, passwd in self.test_accounts.items():
             self.assertEqual(self.cmd.login(user, passwd), 0)
 
     def test_logout(self):
-        for user, passwd in test_account.items():
+        for user, passwd in self.test_accounts.items():
             self.assertEqual(self.cmd.login(user, passwd), 0)
         self.assertEqual(self.cmd.logout(), 0)
 
@@ -175,7 +173,7 @@ class TestMegaCmd(unittest.TestCase):
         test_file = Path(SCRIPT_DIR, "test.txt")
         test_file.touch()
 
-        for username, password in test_account.items():
+        for username, password in self.test_accounts.items():
             cmd = f"{MEGATOOLS_PATH} mkdir /Root/testfolder -u {username} -p {password}"
             subprocess.Popen(cmd, shell=True).wait()
 

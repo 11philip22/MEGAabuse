@@ -8,7 +8,6 @@ import json
 import logging
 import multiprocessing
 import subprocess
-import sys
 from os import linesep, path, walk
 from pathlib import Path
 
