@@ -1,11 +1,12 @@
 import re
+import shutil
+import subprocess
 import sys
 import unittest
 from os import path, remove
-import subprocess
 from pathlib import Path
 
-from megaabuse import CreateAccount, MegaCmd, MegaAbuse
+from megaabuse import CreateAccount, MegaAbuse, MegaCmd
 from megaabuse.accountfactory import GuerrillaGen, IGenMail
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
@@ -18,6 +19,18 @@ else:
     MEGATOOLS_PATH = Path(BIN_PATH, "megatools_linux", "megatools")
     MEGACMD_PATH = Path(BIN_PATH, "megacmd_linux")
     CMD_SERVER_PATH = Path(MEGACMD_PATH, "mega-cmd-server")
+
+
+class TestDovSsha512(unittest.TestCase):
+    def setUp(self):
+        self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
+
+    def test_encode(self):
+        string = "hoi"
+        encoded_str = self.acc_fac.encode(string)
+        print(encoded_str)
+
+        self.assertEqual(len(encoded_str), 117)
 
 
 class TestIGenMail(unittest.TestCase):
@@ -45,13 +58,6 @@ class TestIGenMail(unittest.TestCase):
         )
 
         self.assertEqual(self.acc_fac.conn.server_info, "10.3.22-MariaDB-1ubuntu1")
-
-    def test_encode(self):
-        string = "hoi"
-        encoded_str = self.acc_fac.encode(string)
-        print(encoded_str)
-
-        self.assertEqual(len(encoded_str), 117)
 
     def test_create_mail_user(self):
         self.test_db_connection()
@@ -144,6 +150,9 @@ class TestCreateAccount(unittest.TestCase):
         self.assertEqual(create_acc.total_accounts_created, 3)
 
 
+URL_REGEX = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+
+
 class TestMegaCmd(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestMegaCmd, self).__init__(*args, **kwargs)
@@ -163,13 +172,12 @@ class TestMegaCmd(unittest.TestCase):
             self.assertEqual(self.cmd.login(user, passwd), 0)
 
     def test_logout(self):
+        self.cmd.logout()
         for user, passwd in self.test_accounts.items():
             self.assertEqual(self.cmd.login(user, passwd), 0)
-        self.assertEqual(self.cmd.logout(), 0)
+            self.assertEqual(self.cmd.logout(), 0)
 
     def test_export(self):
-        url_regex = re.compile("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
-
         test_file = Path(SCRIPT_DIR, "test.txt")
         test_file.touch()
 
@@ -182,13 +190,15 @@ class TestMegaCmd(unittest.TestCase):
 
             export_url = self.cmd.export_folder(username, password, "/testfolder")
             print(f"Export url: {export_url}")
-            self.assertTrue(bool(url_regex.findall(export_url)))
+            self.assertTrue(bool(URL_REGEX.findall(export_url)))
             break
         remove(test_file)
 
 
 class TestMegaAbuse(unittest.TestCase):
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
+        super(TestMegaAbuse, self).__init__(*args, **kwargs)
+
         self.test_files = {}
         self.test_files_no_json = {}
 
@@ -209,10 +219,19 @@ class TestMegaAbuse(unittest.TestCase):
 
                 if not file.is_file():
                     with open(file, "wb") as test_file:
-                        test_file.seek(15728640-1)
+                        test_file.seek(15728640 - 1)
                         test_file.write(b"\0")
 
-        self.abuse = MegaAbuse(MEGATOOLS_PATH, MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(Path(SCRIPT_DIR, "testdata"))
+
+    def setUp(self):
+        self.abuse = MegaAbuse(
+            mega_tools_path=MEGATOOLS_PATH,
+            mega_cmd_path=MEGACMD_PATH,
+            cmd_server_path=CMD_SERVER_PATH
+        )
 
     def tearDown(self):
         pass
@@ -234,10 +253,18 @@ class TestMegaAbuse(unittest.TestCase):
         self.assertEqual(self.abuse.find_files(Path(self.test_folder), [".json", ]), self.test_files_no_json)
 
     def test_divide_files(self):
-        pass
+        divided_files = self.abuse.divide_files(self.test_files, 47185920)
 
-    def upload_folder(self):
-        pass
+        self.assertTrue(len(divided_files) == 10)
+        for chunk in divided_files:
+            self.assertTrue(len(chunk) <= 3)
+
+    def test_upload_folder(self):
+        export_urls = self.abuse.upload_folder(self.test_folder)
+        self.assertTrue(bool(URL_REGEX.findall(export_urls[0])))
+
+        for url in export_urls:
+            print(f"Export url: {url}")
 
 
 if __name__ == '__main__':

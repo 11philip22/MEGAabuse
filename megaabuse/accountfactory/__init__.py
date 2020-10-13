@@ -213,6 +213,7 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             welcome_mail = imap.search(None, "FROM", '"welcome@mega.nz"')[1]
             if welcome_mail == [b'']:  # If mailbox contains no mail
                 imap.close()
+                imap.logout()
                 continue
             else:
                 self.logger.info("Got mail")
@@ -223,6 +224,9 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         raw_email = data[0][1]
         raw_email_string = raw_email.decode('utf-8')
         confirm_url = self.extract_url(raw_email_string)  # Extract confirm url from mail
+
+        imap.close()
+        imap.logout()
 
         # Confirm new account
         confirm_command = f"{self.megareg_dir} {confirm_text.replace('@LINK@', confirm_url)}"
