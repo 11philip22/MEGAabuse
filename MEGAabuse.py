@@ -1,19 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#  Copyright Philip Woldhek 2020
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """" Uploads files to MEGA. without limits (except speed lol)
 
@@ -27,6 +13,7 @@ import json
 import argparse
 import multiprocessing
 import sys
+import time
 from operator import not_
 from os import linesep, listdir, path
 from pathlib import Path
@@ -78,12 +65,6 @@ PARSER.add_argument(
     help="Output debug logs"
 )
 PARSER.add_argument(
-    "-vvv",
-    required=False,
-    action="store_true",
-    help="Output super debug logs"
-)
-PARSER.add_argument(
     "-n", "--no-write",
     required=False,
     action="store_true",
@@ -94,6 +75,19 @@ PARSER.add_argument(
     required=False,
     action="store_true",
     help="Use socks5 proxies defined in proxy.txt"
+)
+PARSER.add_argument(
+    "-o", "--overwrite",
+    required=False,
+    action="store_true",
+    help="Overwrite resume file. This will do an upload from scratch"
+)
+PARSER.add_argument(
+    "--generate-accounts",
+    required=False,
+    type=int,
+    metavar="<amount of accounts>",
+    help="Generate any number of mega accounts"
 )
 
 SCRIPT_ARGS = PARSER.parse_args()
@@ -117,8 +111,6 @@ if SCRIPT_ARGS.vv:  # Enable debug mode
     level = 10
 elif SCRIPT_ARGS.v:  # Enable console log output
     level = 20
-elif SCRIPT_ARGS.vvv:  # Enable super verbose output
-    level = 0
 else:
     level = 40
 
@@ -183,12 +175,12 @@ worker_count = multiprocessing.Value("i", 0)
 
 # Init main class
 ABUSE = MegaAbuse(
-    MEGATOOLS_PATH,
-    MEGACMD_PATH,
-    Path(SCRIPT_DIR, "resume"),        # Optional
-    Path(SCRIPT_DIR, "accounts.txt"),  # Optional
-    Path(SCRIPT_DIR, "done.txt"),      # Optional
-    CMD_SERVER_PATH,                   # Optional
+    mega_tools_path=MEGATOOLS_PATH,
+    mega_cmd_path=MEGACMD_PATH,
+    resume_dir=Path(SCRIPT_DIR, "resume"),          # Optional
+    accounts_file=Path(SCRIPT_DIR, "accounts.txt"),  # Optional
+    done_file=Path(SCRIPT_DIR, "done.txt"),          # Optional
+    cmd_server_path=CMD_SERVER_PATH,                 # Optional
     logger=LOGGER,
     write_files=not_(SCRIPT_ARGS.no_write)
 )
@@ -208,8 +200,17 @@ def worker(folder_path):
         LOGGER.debug("Using proxy: %s", proxy)
         LOGGER.debug("Proxies in store: %s", proxy_store.qsize())
 
+    start = time.time()  # Begin counter
+
     exported_urls = ABUSE.upload_folder(folder_path, proxy)
     LOGGER.info("Done uploading: %s", folder_path)
+
+    end = time.time()
+    elapsed_time_s = int(end - start)
+    if elapsed_time_s >= 3600:  # If upload took longer than an hour
+        sleep_time_s = elapsed_time_s / 4  # Wait 25% of tasks completion time
+        LOGGER.info("Sleeping for %s", sleep_time_s)
+        time.sleep(sleep_time_s)
 
     if SCRIPT_ARGS.proxy:
         # Return proxy
@@ -289,7 +290,7 @@ def upload_manager(queue):
 
 
 if __name__ == "__main__":
-    """
+    """" Init
     On Windows multiprocessing.Pool.map will import the main module at start.
     This if statement is to avoid the pool being mapped recursively.
     """
@@ -297,6 +298,15 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
 
     upload_queue = []  # To be downloaded
+
+    if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
+        if SCRIPT_ARGS.overwrite:
+            ABUSE.overwrite = True
+
+    # Generate Mega.nz accounts
+    if SCRIPT_ARGS.generate_accounts:
+        for user, passwd in ABUSE.get(SCRIPT_ARGS.generate_accounts).items():
+            print(user, passwd)
 
     # Upload sub dirs
     if SCRIPT_ARGS.upload_subdirs:
