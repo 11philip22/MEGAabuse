@@ -80,11 +80,10 @@ class MegaCmd:
 
     def logout(self):
         """" Logs out of megacmd """
-        self.logger.log(0, "Logout function called")
 
         cmd_path = Path(self.cmd_path, "mega-logout")
         cmd = str(cmd_path)
-        self.logger.log(0, cmd)
+        self.logger.debug(cmd)
 
         proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
         proc.wait()
@@ -92,11 +91,10 @@ class MegaCmd:
 
     def login(self, username, password):
         """" Logs in to megacmd """
-        self.logger.log(0, "Login function called")
 
         cmd_path = Path(self.cmd_path, "mega-login")
         cmd = f"{cmd_path} \"{username}\" \"{password}\""
-        self.logger.log(0, cmd)
+        self.logger.debug(cmd)
 
         proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
         proc.wait()
@@ -119,15 +117,13 @@ class MegaCmd:
 
         """
 
-        self.logger.log(0, "Export function called")
-
         with self.LOCK:
             self.logout()
             self.login(username, password)
 
             cmd_path = Path(self.cmd_path, "mega-export")
             cmd = f"{cmd_path} -a {folder_name}"
-            self.logger.log(0, cmd)
+            self.logger.debug(cmd)
 
             output = subprocess.Popen(
                 cmd,

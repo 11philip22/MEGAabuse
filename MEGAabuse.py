@@ -64,12 +64,6 @@ PARSER.add_argument(
     help="Output debug logs"
 )
 PARSER.add_argument(
-    "-vvv",
-    required=False,
-    action="store_true",
-    help="Output super debug logs"
-)
-PARSER.add_argument(
     "-n", "--no-write",
     required=False,
     action="store_true",
@@ -117,8 +111,6 @@ if SCRIPT_ARGS.vv:  # Enable debug mode
     level = 10
 elif SCRIPT_ARGS.v:  # Enable console log output
     level = 20
-elif SCRIPT_ARGS.vvv:  # Enable super verbose output
-    level = 0
 else:
     level = 40
 

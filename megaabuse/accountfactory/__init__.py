@@ -195,7 +195,7 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
         if proxy:
             cmd += f" --proxy={proxy}"
-        self.logger.log(0, cmd)
+        self.logger.debug(cmd)
 
         confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
         confirm_text = confirm_text[confirm_text.find("-"):]
@@ -277,7 +277,7 @@ class GuerrillaGen(AccountFactory):
             cmd = f"{self.megareg_dir} -n {name} -e {email} -p {email_password} --register --scripted"
             if proxy:
                 cmd += f" --proxy={proxy}"
-            self.logger.log(0, cmd)
+            self.logger.debug(cmd)
             confirm_text = subprocess.check_output(cmd, shell=True).decode('UTF-8')
             confirm_text = confirm_text[confirm_text.find("-"):]
             email_code_pairs[email] = confirm_text

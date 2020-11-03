@@ -30,7 +30,6 @@ def get_logger(name, *args, level=40, write=False):
         The location of the logging folder. Will be created if does not exists.
     level : int, optional
         Sets logger level.
-        0 : not set
         10 : debug
         20 : info
         40 : error
@@ -71,10 +70,11 @@ def get_logger(name, *args, level=40, write=False):
         log_file.touch()
 
         file_handler = logging.FileHandler(str(log_file))
-        if level == "vvv":  # Enable super verbose output
-            file_handler.setLevel(logging.NOTSET)
-        else:
+
+        if level == 10:
             file_handler.setLevel(logging.DEBUG)
+        else:
+            file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
@@ -83,8 +83,6 @@ def get_logger(name, *args, level=40, write=False):
         stream_handler.setLevel(logging.DEBUG)
     elif level == 20:  # Enable console log output
         stream_handler.setLevel(logging.INFO)
-    elif level == 0:  # Enable super verbose output
-        stream_handler.setLevel(logging.NOTSET)
     elif level == 40:  # Enable error output
         stream_handler.setLevel(logging.ERROR)
     else:
@@ -306,12 +304,10 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
         """
 
-        self.logger.log(0, "Create folder function called")
-
         cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
         if proxy:
             cmd += f" --proxy={proxy}"
-        self.logger.log(0, cmd)
+        self.logger.debug(cmd)
 
         subprocess.Popen(cmd, shell=True).wait()
 
@@ -331,12 +327,10 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
         """
 
-        self.logger.log(0, "Upload file function called")
-
         cmd = f"{self.tools_path} put -u {username} -p {password} --path \"{remote_path}\" \"{file_path}\""
         if proxy:
             cmd += f" --proxy={proxy}"
-        self.logger.log(0, cmd)
+        self.logger.debug(cmd)
 
         return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
 
