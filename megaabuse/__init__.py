@@ -342,7 +342,6 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
     def upload_chunks(self, chunks, dir_name, proxy):  # Proxy can be str or False
         """" Uploads the chunks to mega.nz """
-        self.logger.log(0, "Upload chunks function called")
 
         resume_data = []
         if self.write_files:
@@ -452,7 +451,6 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
     def upload_folder(self, folder_path, proxy=False):
         """" Uploads a folder to mega.nz returns download urls """
-        self.logger.log(0, "Upload folder function called")
         if not self.ignore_done:
             if folder_path in self.done and self.write_files:
                 self.logger.info("Skipping: %s", folder_path)

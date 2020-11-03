@@ -1,19 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#  Copyright Philip Woldhek 2020
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """" Uploads files to MEGA. without limits (except speed lol)
 
@@ -100,6 +86,14 @@ PARSER.add_argument(
     required=False,
     action="store_true",
     help="Overwrite resume file. This will do an upload from scratch"
+)
+PARSER.add_argument(
+    "--generate-accounts",
+    required=False,
+    # action="store_true",
+    type=int,
+    metavar="<amount of accounts>",
+    help="Generate any number of mega accounts"
 )
 
 SCRIPT_ARGS = PARSER.parse_args()
@@ -308,6 +302,11 @@ if __name__ == "__main__":
     if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
         if SCRIPT_ARGS.overwrite:
             pass
+
+    # Generate Mega.nz accounts
+    if SCRIPT_ARGS.generate_accounts:
+        for user, passwd in ABUSE.get(SCRIPT_ARGS.generate_accounts).items():
+            print(user, passwd)
 
     # Upload sub dirs
     if SCRIPT_ARGS.upload_subdirs:

@@ -1,12 +1,15 @@
 .idea/
+.vs/
 __pycache__/
 resume/
 logs/
 binaries/megacmd_windows/.megaCmd/
 testdata/
+env/
 accounts.txt
 done.txt
 out.txt
 out.json
 proxies.txt
 docker-compose.yml
+MEGAabuse.pyproj
