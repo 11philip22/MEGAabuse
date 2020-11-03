@@ -1,7 +1,4 @@
 names~=0.3.0
-bs4~=0.0.1
-requests~=2.23.0
-cx_freeze
+requests~=2.22.0
 pathlib~=1.0.1
-beautifulsoup4~=4.9.0
-selenium~=3.141.0
+mariadb~=1.0.2

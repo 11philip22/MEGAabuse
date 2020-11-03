@@ -1,0 +1,3 @@
+To be compliant with the GNU GENERAL PUBLIC LICENSE Version 2 June 1991 license of megatools.
+Here is a link to the megatools source code.
+https://megous.com/git/megatools
