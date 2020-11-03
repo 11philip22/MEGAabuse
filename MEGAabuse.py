@@ -13,6 +13,7 @@ import json
 import argparse
 import multiprocessing
 import sys
+import time
 from operator import not_
 from os import linesep, listdir, path
 from pathlib import Path
@@ -75,16 +76,15 @@ PARSER.add_argument(
     action="store_true",
     help="Use socks5 proxies defined in proxy.txt"
 )
-# PARSER.add_argument(  # todo: fix logger
-#     "-o", "--overwrite",
-#     required=False,
-#     action="store_true",
-#     help="Overwrite resume file. This will do an upload from scratch"
-# )
+PARSER.add_argument(
+    "-o", "--overwrite",
+    required=False,
+    action="store_true",
+    help="Overwrite resume file. This will do an upload from scratch"
+)
 PARSER.add_argument(
     "--generate-accounts",
     required=False,
-    # action="store_true",
     type=int,
     metavar="<amount of accounts>",
     help="Generate any number of mega accounts"
@@ -200,8 +200,15 @@ def worker(folder_path):
         LOGGER.debug("Using proxy: %s", proxy)
         LOGGER.debug("Proxies in store: %s", proxy_store.qsize())
 
+    start = time.time()
     exported_urls = ABUSE.upload_folder(folder_path, proxy)
+    end = time.time()
     LOGGER.info("Done uploading: %s", folder_path)
+    elapsed_time_s = int(end - start)
+    if elapsed_time_s >= 3600:
+        sleep_time_s = elapsed_time_s / 4
+        LOGGER.info("Sleeping for %s", sleep_time_s)
+        time.sleep(sleep_time_s)
 
     if SCRIPT_ARGS.proxy:
         # Return proxy
@@ -290,10 +297,9 @@ if __name__ == "__main__":
 
     upload_queue = []  # To be downloaded
 
-    # # todo: -o for overwrite  # todo: fix logger
-    # if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
-    #     if SCRIPT_ARGS.overwrite:
-    #         ABUSE.overwrite = True
+    if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
+        if SCRIPT_ARGS.overwrite:
+            ABUSE.overwrite = True
 
     # Generate Mega.nz accounts
     if SCRIPT_ARGS.generate_accounts:

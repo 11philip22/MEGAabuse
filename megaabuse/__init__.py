@@ -348,7 +348,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
                 resume_file.touch()
             else:
                 if self.overwrite:  # if the file exists and overwrite is True empty file before proceeding
-                    logging.debug("Overwriting %s", resume_file)
+                    self.logger.debug("Overwriting %s", resume_file)
                     with open(resume_file, "r+") as trunc_file:
                         trunc_file.truncate()
 
