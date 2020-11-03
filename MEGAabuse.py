@@ -75,12 +75,12 @@ PARSER.add_argument(
     action="store_true",
     help="Use socks5 proxies defined in proxy.txt"
 )
-PARSER.add_argument(
-    "-o", "--overwrite",
-    required=False,
-    action="store_true",
-    help="Overwrite resume file. This will do an upload from scratch"
-)
+# PARSER.add_argument(  # todo: fix logger
+#     "-o", "--overwrite",
+#     required=False,
+#     action="store_true",
+#     help="Overwrite resume file. This will do an upload from scratch"
+# )
 PARSER.add_argument(
     "--generate-accounts",
     required=False,
@@ -290,10 +290,10 @@ if __name__ == "__main__":
 
     upload_queue = []  # To be downloaded
 
-    # todo: -o for overwrite
-    if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
-        if SCRIPT_ARGS.overwrite:
-            pass
+    # # todo: -o for overwrite  # todo: fix logger
+    # if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
+    #     if SCRIPT_ARGS.overwrite:
+    #         ABUSE.overwrite = True
 
     # Generate Mega.nz accounts
     if SCRIPT_ARGS.generate_accounts:

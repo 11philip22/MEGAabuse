@@ -173,6 +173,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
         Counter for all the files being processed. Used for logging purposes.
     ignore_done : bool
         if done.txt should be ignored or not
+    overwrite : bool
+        if True overwrites resume json files.
 
     Methods
     -------
@@ -195,6 +197,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
     total_files_count = multiprocessing.Value("i", 0)
     ignore_done = False
+    overwrite = False
 
     def __init__(self, logger=None, write_files=False, **kwargs):
         """" Init function
@@ -341,8 +344,13 @@ class MegaAbuse(CreateAccount, MegaCmd):
         if self.write_files:
             # Create resume file
             resume_file = Path(self.resume_dir, f"{dir_name}.json")
-            if not resume_file.is_file() and self.write_files:
+            if not resume_file.is_file():
                 resume_file.touch()
+            else:
+                if self.overwrite:  # if the file exists and overwrite is True empty file before proceeding
+                    logging.debug("Overwriting %s", resume_file)
+                    with open(resume_file, "r+") as trunc_file:
+                        trunc_file.truncate()
 
             # Try to load data from resume file if fails create empty resume data var
             with open(resume_file, "r+") as json_file:
