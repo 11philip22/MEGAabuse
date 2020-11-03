@@ -395,15 +395,21 @@ class MegaAbuse(CreateAccount, MegaCmd):
                     extension = file.split(".")[-1]
                     file_name = f"{file_path.stem}.{extension}"
 
-                    # Returns True on a successful upload
-                    if self.upload_file(user_name, password, f"/Root/{folder_name}/{file_name}", file, proxy):
+                    attempts = 0
+                    while attempts < 5:
+                        # Returns True on a successful upload
+                        if self.upload_file(user_name, password, f"/Root/{folder_name}/{file_name}", file, proxy):
 
-                        # Update resume data
-                        uploaded_files.append(file)
-                        if self.write_files:
-                            self.update_json_file(resume_file, resume_data)
-                    else:
-                        self.logger.error("Error uploading: %s", file)
+                            # Update resume data
+                            uploaded_files.append(file)
+                            if self.write_files:
+                                self.update_json_file(resume_file, resume_data)
+
+                            self.logger.debug("Successfully uploaded: %s", file)
+                            break
+                        else:
+                            self.logger.error("Error uploading: %s. Attempting s% more times", file, 5 - attempts)
+                            attempts += 1
                 else:
                     self.logger.info("Skipping: %s", file)
 

@@ -200,13 +200,15 @@ def worker(folder_path):
         LOGGER.debug("Using proxy: %s", proxy)
         LOGGER.debug("Proxies in store: %s", proxy_store.qsize())
 
-    start = time.time()
+    start = time.time()  # Begin counter
+
     exported_urls = ABUSE.upload_folder(folder_path, proxy)
-    end = time.time()
     LOGGER.info("Done uploading: %s", folder_path)
+
+    end = time.time()
     elapsed_time_s = int(end - start)
-    if elapsed_time_s >= 3600:
-        sleep_time_s = elapsed_time_s / 4
+    if elapsed_time_s >= 3600:  # If upload took longer than an hour
+        sleep_time_s = elapsed_time_s / 4  # Wait 25% of tasks completion time
         LOGGER.info("Sleeping for %s", sleep_time_s)
         time.sleep(sleep_time_s)
 
