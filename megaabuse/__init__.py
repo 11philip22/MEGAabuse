@@ -70,11 +70,13 @@ def get_logger(name, *args, level=40, write=False):
         log_file.touch()
 
         file_handler = logging.FileHandler(str(log_file))
+        file_handler.setLevel(logging.DEBUG)  # Always write log files in debug mode
 
-        if level == 10:
-            file_handler.setLevel(logging.DEBUG)
-        else:
-            file_handler.setLevel(logging.INFO)
+        # if level == 10:  # Uncomment block to only write log files in debug mode when -vv is passed
+        #     file_handler.setLevel(logging.DEBUG)
+        # else:
+        #     file_handler.setLevel(logging.INFO)
+
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
