@@ -410,7 +410,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
                             self.logger.debug("Successfully uploaded: %s", file)
                             break
                         else:
-                            self.logger.error("Error uploading: %s. Attempting s% more times", file, 5 - attempts)
+                            self.logger.error("Error uploading: %s. Attempting %i more times", file, 5 - attempts)
                             attempts += 1
                 else:
                     self.logger.info("Skipping: %s", file)
