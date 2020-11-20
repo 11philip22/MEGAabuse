@@ -209,7 +209,7 @@ def worker(folder_path):
     elapsed_time_s = int(end - start)
     if elapsed_time_s >= 3600:  # If upload took longer than an hour
         sleep_time_s = elapsed_time_s / 4  # Wait 25% of tasks completion time
-        LOGGER.info("Sleeping for %s", sleep_time_s)
+        LOGGER.info("Sleeping for %is", sleep_time_s)
         time.sleep(sleep_time_s)
 
     if SCRIPT_ARGS.proxy:

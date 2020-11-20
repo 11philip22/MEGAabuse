@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 
+# Todo: implement megaSDK
 class MegaCmd:
     """" A python wrapper around megacmd
 
