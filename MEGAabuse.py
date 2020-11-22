@@ -83,6 +83,12 @@ PARSER.add_argument(
     help="Overwrite resume file. This will do an upload from scratch"
 )
 PARSER.add_argument(
+    "-id", "--ignore-done",
+    required=False,
+    action="store_true",
+    help="Ignores the done file"
+)
+PARSER.add_argument(
     "--generate-accounts",
     required=False,
     type=int,
@@ -302,6 +308,9 @@ if __name__ == "__main__":
     if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
         if SCRIPT_ARGS.overwrite:
             ABUSE.overwrite = True
+
+        if SCRIPT_ARGS.ignore_done:
+            ABUSE.ignore_done = True
 
     # Generate Mega.nz accounts
     if SCRIPT_ARGS.generate_accounts:
