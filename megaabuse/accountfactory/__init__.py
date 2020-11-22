@@ -19,17 +19,8 @@ import mariadb
 from names import get_first_name
 
 from . import guerrillamail
+from .exceptions import WaitForMailTimoutException
 from .dov_ssha512 import DovecotSSHA512Hasher
-
-
-class WaitForMailTimoutException(Exception):
-    def __init__(self, timout):
-        self.timout = timout
-        self.message = f"Timout exceeded {timout} seconds"
-        super().__init__(self.message)
-
-    def __str__(self):
-        return f'{self.timout} -> {self.message}'
 
 
 class AccountFactory:
