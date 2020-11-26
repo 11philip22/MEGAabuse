@@ -83,6 +83,12 @@ PARSER.add_argument(
     help="Overwrite resume file. This will do an upload from scratch"
 )
 PARSER.add_argument(
+    "-id", "--ignore-done",
+    required=False,
+    action="store_true",
+    help="Ignores the done file"
+)
+PARSER.add_argument(
     "--generate-accounts",
     required=False,
     type=int,
@@ -177,7 +183,7 @@ worker_count = multiprocessing.Value("i", 0)
 ABUSE = MegaAbuse(
     mega_tools_path=MEGATOOLS_PATH,
     mega_cmd_path=MEGACMD_PATH,
-    resume_dir=Path(SCRIPT_DIR, "resume"),          # Optional
+    resume_dir=Path(SCRIPT_DIR, "resume"),           # Optional
     accounts_file=Path(SCRIPT_DIR, "accounts.txt"),  # Optional
     done_file=Path(SCRIPT_DIR, "done.txt"),          # Optional
     cmd_server_path=CMD_SERVER_PATH,                 # Optional
@@ -209,7 +215,7 @@ def worker(folder_path):
     elapsed_time_s = int(end - start)
     if elapsed_time_s >= 3600:  # If upload took longer than an hour
         sleep_time_s = elapsed_time_s / 4  # Wait 25% of tasks completion time
-        LOGGER.info("Sleeping for %s", sleep_time_s)
+        LOGGER.info("Sleeping for %is", sleep_time_s)
         time.sleep(sleep_time_s)
 
     if SCRIPT_ARGS.proxy:
@@ -302,6 +308,9 @@ if __name__ == "__main__":
     if not SCRIPT_ARGS.no_write:  # Not applicable if files are ignored
         if SCRIPT_ARGS.overwrite:
             ABUSE.overwrite = True
+
+        if SCRIPT_ARGS.ignore_done:
+            ABUSE.ignore_done = True
 
     # Generate Mega.nz accounts
     if SCRIPT_ARGS.generate_accounts:

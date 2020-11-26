@@ -19,6 +19,7 @@ import mariadb
 from names import get_first_name
 
 from . import guerrillamail
+from .exceptions import WaitForMailTimoutException
 from .dov_ssha512 import DovecotSSHA512Hasher
 
 
@@ -202,7 +203,12 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
         self.logger.info("Done registering")
 
         # Wait for mail
+        wait_time = 0
         while True:
+            if wait_time > 120:
+                self.logger.error("Waiting for mail time exceeded 2 minutes. Aborting")
+                raise WaitForMailTimoutException(wait_time)
+
             imap = imaplib.IMAP4_SSL(imap_address)
             if not imap.login(email, email_password)[0] == "OK":
                 self.logger.error("Could not login to the mail server")
@@ -214,6 +220,8 @@ class IGenMail(AccountFactory, DovecotSSHA512Hasher):
             if welcome_mail == [b'']:  # If mailbox contains no mail
                 imap.close()
                 imap.logout()
+                wait_time += 2
+                time.sleep(2)
                 continue
             else:
                 self.logger.info("Got mail")
@@ -246,8 +254,9 @@ class GuerrillaGen(AccountFactory):
         wait_time = 0
         while True:
             if wait_time > 120:
-                self.logger.info("Waiting for mail time exceeded 2 minutes. Aborting")
-                return False
+                self.logger.error("Waiting for mail time exceeded 2 minutes. Aborting")
+                raise WaitForMailTimoutException(wait_time)
+                # return False
             mail_str = str(guerrillamail.cli("list"))
             if "welcome@mega.nz" in mail_str:
                 return mail_str

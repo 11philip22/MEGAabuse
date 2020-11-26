@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 
+# Todo: implement megaSDK
 class MegaCmd:
     """" A python wrapper around megacmd
 
@@ -81,8 +82,8 @@ class MegaCmd:
     def logout(self):
         """" Logs out of megacmd """
 
-        cmd_path = Path(self.cmd_path, "mega-logout")
-        cmd = str(cmd_path)
+        cmd_path = Path(self.cmd_path, "mega-exec")
+        cmd = f"{cmd_path} logout"
         self.logger.debug(cmd)
 
         proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
@@ -92,8 +93,8 @@ class MegaCmd:
     def login(self, username, password):
         """" Logs in to megacmd """
 
-        cmd_path = Path(self.cmd_path, "mega-login")
-        cmd = f"{cmd_path} \"{username}\" \"{password}\""
+        cmd_path = Path(self.cmd_path, "mega-exec")
+        cmd = f"{cmd_path} login \"{username}\" \"{password}\""
         self.logger.debug(cmd)
 
         proc = subprocess.Popen(cmd, shell=True, cwd=self.cmd_path)
@@ -121,8 +122,8 @@ class MegaCmd:
             self.logout()
             self.login(username, password)
 
-            cmd_path = Path(self.cmd_path, "mega-export")
-            cmd = f"{cmd_path} -a {folder_name}"
+            cmd_path = Path(self.cmd_path, "mega-exec")
+            cmd = f"{cmd_path} export -a {folder_name}"
             self.logger.debug(cmd)
 
             output = subprocess.Popen(

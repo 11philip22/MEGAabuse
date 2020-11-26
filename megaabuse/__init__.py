@@ -10,7 +10,9 @@ import multiprocessing
 import subprocess
 from os import linesep, path, walk
 from pathlib import Path
+from time import sleep
 
+from .accountfactory.exceptions import WaitForMailTimoutException
 from .accountfactory import GuerrillaGen
 from .megacmd import MegaCmd
 
@@ -156,7 +158,18 @@ class CreateAccount(GuerrillaGen):
         """
 
         with self.ACC_LOCK:
-            accounts = self.guerrilla_gen_bulk(amount, False, proxy)
+            attempts = 0
+            while True:
+                try:
+                    accounts = self.guerrilla_gen_bulk(amount, False, proxy)
+                    break
+                except WaitForMailTimoutException:
+                    attempts += 1
+                    if attempts > 10:
+                        raise WaitForMailTimoutException(1200)
+                    self.logger.error("Wait for mail time exceeded. %i more Attempts", 10 - attempts)
+                    sleep(120)
+                    continue
 
         # Write credentials to file
         if self.output:
@@ -410,20 +423,26 @@ class MegaAbuse(CreateAccount, MegaCmd):
                             self.logger.debug("Successfully uploaded: %s", file)
                             break
                         else:
-                            self.logger.error("Error uploading: %s. Attempting s% more times", file, 5 - attempts)
+                            self.logger.error("Error uploading: %s. Attempting %i more times", file, 5 - attempts)
                             attempts += 1
                 else:
                     self.logger.info("Skipping: %s", file)
 
-            # Folder path is with / instead of /Root because the export folder function
-            # uses megacmd instead of megatools.
-            export_url = super().export_folder(user_name, password, f"/{folder_name}")
-            export_urls.append(export_url)
+            if "export url" in resume_data[c_counter]:
+                export_url = resume_data[c_counter]["export url"]
+                export_urls.append(export_url)
+                self.logger.debug("Found export url: %s in resume data", export_url)
+            else:
+                self.logger.debug("Exporting: %s", f"/{folder_name}")
+                # Folder path is with / instead of /Root because the export folder function
+                # uses megacmd instead of megatools.
+                export_url = super().export_folder(user_name, password, f"/{folder_name}")
+                export_urls.append(export_url)
 
-            # Write export url to resume file
-            resume_data[c_counter].update({"export url": export_url})
-            if self.write_files:
-                self.update_json_file(resume_file, resume_data)
+                # Write export url to resume file
+                resume_data[c_counter].update({"export url": export_url})
+                if self.write_files:
+                    self.update_json_file(resume_file, resume_data)
 
             c_counter += 1
         return export_urls
