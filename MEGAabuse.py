@@ -21,6 +21,14 @@ from pathlib import Path
 from megaabuse import MegaAbuse, get_logger
 from megaabuse.macqueue import Queue
 
+print("""
+______  __________________________       ______                     
+___   |/  /__  ____/_  ____/__    |_____ ___  /_____  _____________ 
+__  /|_/ /__  __/  _  / __ __  /| |  __ `/_  __ \  / / /_  ___/  _ \\
+_  /  / / _  /___  / /_/ / _  ___ / /_/ /_  /_/ / /_/ /_(__  )/  __/
+/_/  /_/  /_____/  \____/  /_/  |_\__,_/ /_.___/\__,_/ /____/ \___/    
+""")
+
 # Parse arguments
 PARSER = argparse.ArgumentParser(description="MEGAabuse")
 
