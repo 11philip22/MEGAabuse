@@ -117,10 +117,8 @@ class TestCreateAccount(unittest.TestCase):
         self.assertFalse(self.account_file.is_file())
 
     def tearDown(self):
-        try:  # Cleanup
+        if self.account_file.is_file():
             remove(self.account_file)
-        except FileNotFoundError:
-            pass
 
     def test_account_creation_no_write(self):
         create_acc = CreateAccount(mega_tools_path=MEGATOOLS_PATH)
@@ -163,6 +161,12 @@ class TestMegaCmd(unittest.TestCase):
     def setUp(self):
         self.cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
 
+    @classmethod
+    def tearDownClass(cls):
+        test_file = Path(SCRIPT_DIR, "test.txt")
+        if test_file.is_file():
+            remove(test_file)
+
     def test_server_init(self):
         self.assertEqual(type(self.cmd.cmd_server_proc.pid), int)
 
@@ -192,7 +196,6 @@ class TestMegaCmd(unittest.TestCase):
             print(f"Export url: {export_url}")
             self.assertTrue(bool(URL_REGEX.findall(export_url)))
             break
-        remove(test_file)
 
 
 class TestMegaAbuse(unittest.TestCase):
