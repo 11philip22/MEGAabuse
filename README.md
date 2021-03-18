@@ -7,6 +7,16 @@ _  /  / / _  /___  / /_/ / _  ___ / /_/ /_  /_/ / /_/ /_(__  )/  __/
 ````
 # Warning: this program should never be used by anyone
 # I am not responsible for any violations of the mega TOS
+In her current state this program only really supports bulk uploading of mostly the same file types.  
+It skips json files by default. It does not respect folder hierarchy.  
+So if you have a folder containing multiple subfolders with for example jpeg's.  
+It will dump all the contents of the different subfolders into the MEGA root.  
+  
+The program is tested and originally intended to be used with: pictures, videos, pdf's, and zip files.  
+And will not play nice with more complex folder structures like a .git directory.  
+  
+If you know a nice feature, wanna fix one of the above mentioned limitations or implement something from the todo list.   
+PR's are always welcome :)
 ## Install instructions
 ### Ubuntu
 ```bash
