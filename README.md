@@ -60,3 +60,5 @@ coming soon
 - [ ] MacOS support
 - [ ] Keep sub-folder hierarchy
 - [ ] Compile the latest bins or remove them from project
+## Acknowledgements
+- https://github.com/ncjones/python-guerrillamail
