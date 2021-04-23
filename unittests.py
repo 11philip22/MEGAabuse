@@ -7,7 +7,7 @@ from os import path, remove
 from pathlib import Path
 
 from megaabuse import CreateAccount, MegaAbuse, MegaCmd
-from megaabuse.accountfactory import GuerrillaGen, IGenMail
+from megaabuse.accountfactory import GuerrillaGen  # , IGenMail
 
 SCRIPT_DIR = path.dirname(path.realpath(__file__))
 BIN_PATH = Path(SCRIPT_DIR, "binaries")
@@ -21,73 +21,73 @@ else:
     CMD_SERVER_PATH = Path(MEGACMD_PATH, "mega-cmd-server")
 
 
-class TestDovSsha512(unittest.TestCase):
-    def setUp(self):
-        self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
-
-    def test_encode(self):
-        string = "hoi"
-        encoded_str = self.acc_fac.encode(string)
-        print(encoded_str)
-
-        self.assertEqual(len(encoded_str), 117)
-
-
-class TestIGenMail(unittest.TestCase):
-    domain = "bok-bright.com"
-    test_emails = []
-
-    def setUp(self):
-        self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
-
-    def tearDown(self):
-        for mail in self.test_emails:
-            cur = self.acc_fac.conn.cursor()
-            # Remove email
-            self.acc_fac.delete_mail_user(mail)
-            # Check if removed from db
-            cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
-            res = cur.fetchall()
-            self.assertEqual(res, [])
-
-    def test_db_connection(self):
-        self.acc_fac.connect_to_db(
-            host="mail.bok-bright.com",
-            user="root",
-            password="df29ySQLadm3737d4ba00c79cet"
-        )
-
-        self.assertEqual(self.acc_fac.conn.server_info, "10.3.22-MariaDB-1ubuntu1")
-
-    def test_create_mail_user(self):
-        self.test_db_connection()
-
-        mail = f"{self.acc_fac.random_mail()}@{self.domain}"
-        self.test_emails.append(mail)
-        print(f"Email: {mail}")
-        pw = "hoi123456"
-
-        # Create email
-        self.acc_fac.create_mail_user(mail, pw)
-        # Check if created in db
-        cur = self.acc_fac.conn.cursor()
-        cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
-        res = cur.fetchall()
-        # Check against results from db
-        self.assertEqual(res[0][0], mail)
-        self.assertEqual(res[0][1], mail.split("@")[0])
-
-    def test_create_mega_account(self):
-        self.test_db_connection()
-
-        mail, email_pw = self.acc_fac.create_mega_account(self.domain, f"mail.{self.domain}", False, False)
-        self.test_emails.append(mail)
-        print(f"Email: {mail}\nPassword: {email_pw}")
-
-        cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
-        self.assertEqual(cmd.logout(), 0)
-        self.assertEqual(cmd.login(mail, email_pw), 0)
-        self.assertEqual(cmd.logout(), 0)
+# class TestDovSsha512(unittest.TestCase):
+#     def setUp(self):
+#         self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
+#
+#     def test_encode(self):
+#         string = "hoi"
+#         encoded_str = self.acc_fac.encode(string)
+#         print(encoded_str)
+#
+#         self.assertEqual(len(encoded_str), 117)
+#
+#
+# class TestIGenMail(unittest.TestCase):
+#     domain = "bok-bright.com"
+#     test_emails = []
+#
+#     def setUp(self):
+#         self.acc_fac = IGenMail(mega_tools_path=MEGATOOLS_PATH)
+#
+#     def tearDown(self):
+#         for mail in self.test_emails:
+#             cur = self.acc_fac.conn.cursor()
+#             # Remove email
+#             self.acc_fac.delete_mail_user(mail)
+#             # Check if removed from db
+#             cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
+#             res = cur.fetchall()
+#             self.assertEqual(res, [])
+#
+#     def test_db_connection(self):
+#         self.acc_fac.connect_to_db(
+#             host="mail.bok-bright.com",
+#             user="root",
+#             password="df29ySQLadm3737d4ba00c79cet"
+#         )
+#
+#         self.assertEqual(self.acc_fac.conn.server_info, "10.3.22-MariaDB-1ubuntu1")
+#
+#     def test_create_mail_user(self):
+#         self.test_db_connection()
+#
+#         mail = f"{self.acc_fac.random_mail()}@{self.domain}"
+#         self.test_emails.append(mail)
+#         print(f"Email: {mail}")
+#         pw = "hoi123456"
+#
+#         # Create email
+#         self.acc_fac.create_mail_user(mail, pw)
+#         # Check if created in db
+#         cur = self.acc_fac.conn.cursor()
+#         cur.execute("SELECT username,name FROM mailbox WHERE username=?", (mail,))
+#         res = cur.fetchall()
+#         # Check against results from db
+#         self.assertEqual(res[0][0], mail)
+#         self.assertEqual(res[0][1], mail.split("@")[0])
+#
+#     def test_create_mega_account(self):
+#         self.test_db_connection()
+#
+#         mail, email_pw = self.acc_fac.create_mega_account(self.domain, f"mail.{self.domain}", False, False)
+#         self.test_emails.append(mail)
+#         print(f"Email: {mail}\nPassword: {email_pw}")
+#
+#         cmd = MegaCmd(mega_cmd_path=MEGACMD_PATH, cmd_server_path=CMD_SERVER_PATH)
+#         self.assertEqual(cmd.logout(), 0)
+#         self.assertEqual(cmd.login(mail, email_pw), 0)
+#         self.assertEqual(cmd.logout(), 0)
 
 
 class TestGuerrillaGen(unittest.TestCase):
