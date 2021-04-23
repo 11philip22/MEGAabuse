@@ -29,7 +29,7 @@ chmod +x MEGAabuse/binaries/megatools_linux/*
 chmod +x MEGAabuse/MEGAabuse.py
 ```
 ```bash
-sudo cp MEGAabuse/megaabuse/mega/libmega.so /usr/local/lib/
+sudo mv MEGAabuse/megaabuse/mega/libmega.so /usr/local/lib/
 sudo ldconfig
 ```
 This is what i needed to do to get it to work on Ubuntu 20.04.2.  
