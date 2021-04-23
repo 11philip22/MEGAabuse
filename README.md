@@ -28,6 +28,10 @@ chmod +x MEGAabuse/binaries/megacmd_linux/*
 chmod +x MEGAabuse/binaries/megatools_linux/*
 chmod +x MEGAabuse/MEGAabuse.py
 ```
+```bash
+sudo cp MEGAabuse/megaabuse/mega/libmega.so /usr/local/lib/
+sudo ldconfig
+```
 This is what i needed to do to get it to work on Ubuntu 20.04.2.  
 If you are getting errors related to either megacmd or megatools like the one below.
 ```
