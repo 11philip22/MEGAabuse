@@ -13,3 +13,4 @@ out.json
 proxies.txt
 docker-compose.yml
 MEGAabuse.pyproj
+backup*
