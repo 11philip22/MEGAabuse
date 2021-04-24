@@ -49,6 +49,14 @@ PARSER.add_argument(
     help="Upload one or multiple folders"
 )
 PARSER.add_argument(
+    "-sf", "--skip",
+    required=False,
+    type=str,
+    nargs='+',
+    metavar="<.file extension>",
+    help="Skip files by specifying one or more file extensions"
+)
+PARSER.add_argument(
     "-k", "--keep-alive",
     required=False,
     action="store_true",
@@ -199,6 +207,8 @@ ABUSE = MegaAbuse(
     write_files=not_(SCRIPT_ARGS.no_write)
 )
 
+WRONG_EXTENSIONS = []
+
 
 def worker(folder_path):
     """" This is actually just a wrapper around
@@ -216,7 +226,7 @@ def worker(folder_path):
 
     start = time.time()  # Begin counter
 
-    exported_urls = ABUSE.upload_folder(folder_path, proxy)
+    exported_urls = ABUSE.upload_folder(folder_path, WRONG_EXTENSIONS, proxy)
     LOGGER.info("Done uploading: %s", folder_path)
 
     end = time.time()
@@ -345,6 +355,9 @@ if __name__ == "__main__":
             upload_queue.append(folder)
 
     if SCRIPT_ARGS.upload_dirs or SCRIPT_ARGS.upload_subdirs:
+        if SCRIPT_ARGS.skip:
+            WRONG_EXTENSIONS = SCRIPT_ARGS.skip
+
         upload_manager(upload_queue)  # Start Upload process
 
     # Keeps accounts active

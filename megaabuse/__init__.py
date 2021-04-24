@@ -52,7 +52,8 @@ def get_logger(name, *args, level=40, write=False):
 
     if write:  # Dont bother with log files if --no-write is passed
         # Create logs folder
-        log_dir_path = Path(args[0])
+        log_dir = args[0]
+        log_dir_path = Path(log_dir)
         if not log_dir_path.is_dir():
             log_dir_path.mkdir()
 
@@ -478,7 +479,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
             file_chunks.append(file_list)
         return file_chunks
 
-    def upload_folder(self, folder_path, proxy=False):
+    def upload_folder(self, folder_path, wrong_extensions: list, proxy=False):
         """" Uploads a folder to mega.nz returns download urls """
         if not self.ignore_done:
             if folder_path in self.done and self.write_files:
@@ -486,7 +487,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
                 return []
         self.logger.info("Uploading %s", folder_path)
 
-        paths = self.find_files(folder_path, [".json", ])
+        paths = self.find_files(folder_path, wrong_extensions)
         self.logger.info("%s: Found %s files", folder_path, len(paths))
         self.total_files_count.value += len(paths)
         file_lists = self.divide_files(paths, 15000000000)

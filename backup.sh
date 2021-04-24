@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 MEGAabuseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 number=0
