@@ -470,7 +470,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
         folder_name = Path(folder_path).parts[-1]
 
         chunks = []
-        # A chunk is a set of files that fits in a mega account (50GB)
+        # A chunk is a set of files that fits in a mega account (15GB)
         for file_list in file_lists:
             chunks.append({
                 "folder name": folder_name,
