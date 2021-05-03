@@ -1,4 +1,4 @@
-names~=0.3.0
-requests~=2.22.0
-pathlib~=1.0.1
-mariadb~=1.0.2
+names
+requests
+tenacity
+pycryptodome
