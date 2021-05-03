@@ -6,6 +6,7 @@ This file contains the main classes of the module.
 
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import multiprocessing
 import subprocess
 from os import linesep, path, walk
@@ -57,22 +58,23 @@ def get_logger(name, *args, level=40, write=False):
         if not log_dir_path.is_dir():
             log_dir_path.mkdir()
 
-        # Create log file
-        log_file = Path(log_dir_path, "log.txt")
-        # If log file exists rename old one before creating the file
-        if log_file.is_file():
-            count = 0
-            while True:
-                new_file_name = f"log.txt.{count}"
-                new_file_path = Path(log_dir_path, new_file_name)
-                if new_file_path.is_file():
-                    count += 1
-                else:
-                    log_file.rename(new_file_path)
-                    break
-        log_file.touch()
-
-        file_handler = logging.FileHandler(str(log_file))
+        # # Create log file
+        # log_file = Path(log_dir_path, "log.txt")
+        # # If log file exists rename old one before creating the file
+        # if log_file.is_file():
+        #     count = 0
+        #     while True:
+        #         new_file_name = f"log.txt.{count}"
+        #         new_file_path = Path(log_dir_path, new_file_name)
+        #         if new_file_path.is_file():
+        #             count += 1
+        #         else:
+        #             log_file.rename(new_file_path)
+        #             break
+        # log_file.touch()
+        #
+        # file_handler = logging.FileHandler(str(log_file))
+        file_handler = RotatingFileHandler(str(Path(log_dir_path, "log.txt")), maxBytes=2000)
         file_handler.setLevel(logging.DEBUG)  # Always write log files in debug mode
 
         # if level == 10:  # Uncomment block to only write log files in debug mode when -vv is passed
@@ -249,15 +251,6 @@ class MegaAbuse(CreateAccount, MegaCmd):
 
         # Create resume dir
         if self.write_files:
-
-            # # Init CreateAccount with an accounts file
-            # CreateAccount.__init__(
-            #     self,
-            #     mega_tools_path=kwargs["mega_tools_path"],
-            #     accounts_file=kwargs["accounts_file"],
-            #     logger=logger
-            # )
-
             # Resume file
             self.resume_dir = Path(kwargs["resume_dir"])
             if not self.resume_dir.is_dir():
@@ -270,31 +263,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
             else:
                 with open(self.done_file) as f_done:
                     self.done = [line.rstrip() for line in f_done]
-        # else:
-        #
-        #     # Init CreateAccount without an accounts file
-        #     CreateAccount.__init__(
-        #         self,
-        #         mega_tools_path=kwargs["mega_tools_path"],
-        #         logger=logger
-        #     )
-        CreateAccount.__init__(self, **kwargs)
 
-        # # If running on mac os init MegaCmd without a server path
-        # if sys.platform == "darwin":
-        #     MegaCmd.__init__(
-        #         self,
-        #         cmd_path,
-        #         logger=logger
-        #     )
-        # else:
-        #     # Init MegaCmd with server path
-        #     MegaCmd.__init__(
-        #         self,
-        #         cmd_path,
-        #         cmd_server_path=Path(kwargs["cmd_server_path"]),
-        #         logger=logger
-        #     )
+        CreateAccount.__init__(self, **kwargs)
         MegaCmd.__init__(self, **kwargs)
 
         # Create logger or sub logger for class
@@ -328,7 +298,7 @@ class MegaAbuse(CreateAccount, MegaCmd):
             cmd += f" --proxy={proxy}"
         self.logger.debug(cmd)
 
-        subprocess.Popen(cmd, shell=True).wait()
+        return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
 
     def upload_file(self, username, password, remote_path, file_path, proxy=False):
         """" Uploads a file to mega
@@ -401,7 +371,10 @@ class MegaAbuse(CreateAccount, MegaCmd):
             uploaded_files = resume_data[c_counter]["uploaded files"]
 
             # Create folder
-            self.create_folder(user_name, password, f"/Root/{folder_name}", proxy)
+            remote_path = f"/Root/{folder_name}"
+            if not self.create_folder(user_name, password, remote_path, proxy):
+                self.logger.error("Could not create folder: %s", remote_path)
+                raise Exception(f"Could not create folder: {remote_path}")
 
             for file in chunk["files"]:
                 if file not in uploaded_files:
@@ -426,6 +399,9 @@ class MegaAbuse(CreateAccount, MegaCmd):
                         else:
                             self.logger.error("Error uploading: %s. Attempting %i more times", file, 5 - attempts)
                             attempts += 1
+                    else:
+                        self.logger.error("Failed uploading: %s", file)
+                        raise Exception(f"Failed uploading: {file}")
                 else:
                     self.logger.info("Skipping: %s", file)
 

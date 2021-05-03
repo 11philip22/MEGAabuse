@@ -14,10 +14,8 @@ if __package__ or "." in __name__:
 else:
     import _mega
 
-try:
-    import builtins as __builtin__
-except ImportError:
-    import __builtin__
+import builtins as __builtin__
+
 
 def _swig_repr(self):
     try:
