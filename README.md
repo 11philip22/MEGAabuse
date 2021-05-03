@@ -50,8 +50,15 @@ subprocess.CalledProcessError: Command '/home/philip/Devel/MEGAabuse/binaries/me
 ```
 Manually run the command from ``CalledProcessError`` in your shell and see what packages you are missing/
 ### Arch
-```
-coming soon
+```bash
+sudo pacman -S c-ares libraw crypto++ libsodium freeimage
+git clone git@github.com:11philip22/MEGAabuse.git
+chmod +x MEGAabuse/binaries/megacmd_linux/*
+chmod +x MEGAabuse/binaries/megatools_linux/*
+chmod +x MEGAabuse/MEGAabuse.py
+cd MEGAabuse/megaabuse/mega/
+sudo cp libmega.so /usr/local/lib/
+sudo ldconfig
 ```
 ### Debian
 ```
