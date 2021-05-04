@@ -138,7 +138,7 @@ class MegaCmd:
 
         # Return url
         # url = self.URL_REGEX.findall(std_out_text)[0]
-        url = re.search(  # todo: find out what the fuck happened here
+        url = re.search(
             "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[#]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
             std_out_text
         ).group()

@@ -184,6 +184,8 @@ class TestMegaCmd(unittest.TestCase):
     def test_export(self):
         test_file = Path(SCRIPT_DIR, "test.txt")
         test_file.touch()
+        with open(test_file, 'wb') as file:
+            file.write(b"this is a test")
 
         for username, password in self.test_accounts.items():
             cmd = f"{MEGATOOLS_PATH} mkdir /Root/testfolder -u {username} -p {password}"

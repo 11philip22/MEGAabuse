@@ -105,7 +105,7 @@ PARSER.add_argument(
     help="Ignores the done file"
 )
 PARSER.add_argument(
-    "--generate-accounts",
+    "-g", "--generate-accounts",
     required=False,
     type=int,
     metavar="<amount of accounts>",
