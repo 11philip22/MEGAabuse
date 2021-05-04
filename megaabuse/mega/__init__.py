@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class Mega:
-    def __init__(self, options=None):
+    def __init__(self):
         self.schema = 'https'
         self.domain = 'mega.co.nz'
         self.timeout = 160  # max secs to wait for resp from api requests
@@ -34,10 +34,6 @@ class Mega:
         self.sequence_num = random.randint(0, 0xFFFFFFFF)
         self.request_id = make_id(10)
         self._trash_folder_node_id = None
-
-        if options is None:
-            options = {}
-        self.options = options
 
     def login(self, email=None, password=None):
         if email:

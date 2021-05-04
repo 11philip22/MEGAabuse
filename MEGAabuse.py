@@ -372,6 +372,7 @@ if __name__ == "__main__":
 
                 # Log in and log out using megacmd
                 LOGGER.info("Logging into: %s %s", usern, passwd)
-                ABUSE.keep_alive(usern, passwd)
+                # ABUSE.keep_alive(usern, passwd)
+                ABUSE.login(usern, passwd)
 
     LOGGER.info("Done")

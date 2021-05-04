@@ -15,7 +15,8 @@ from time import sleep
 
 from .accountfactory.exceptions import WaitForMailTimoutException
 from .accountfactory import GuerrillaGen
-from .megacmd import MegaCmd
+# from .megacmd import MegaCmd
+from .mega import Mega
 
 
 def get_logger(name, *args, level=40, write=False):
@@ -182,7 +183,7 @@ class CreateAccount(GuerrillaGen):
         return accounts
 
 
-class MegaAbuse(CreateAccount, MegaCmd):
+class MegaAbuse(CreateAccount, Mega):
     """" The main class of MEGAabuse
 
     Attributes
@@ -265,7 +266,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
                     self.done = [line.rstrip() for line in f_done]
 
         CreateAccount.__init__(self, **kwargs)
-        MegaCmd.__init__(self, **kwargs)
+        # MegaCmd.__init__(self, **kwargs)
+        Mega.__init__(self)
 
         # Create logger or sub logger for class
         if logger is None:
@@ -279,26 +281,26 @@ class MegaAbuse(CreateAccount, MegaCmd):
         with open(file, "w") as json_file:
             json.dump(data, json_file, indent=4)
 
-    def create_folder(self, user_name, password, folder_name, proxy=False):
-        """" Create a folder om a mega account
-
-        Parameters
-        ----------
-        user_name : str
-        password : str
-        folder_name : str
-            Root is written as /Root/ instead of /
-        proxy : str, optional
-            Socks5 url
-
-        """
-
-        cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
-        if proxy:
-            cmd += f" --proxy={proxy}"
-        self.logger.debug(cmd)
-
-        return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
+    # def create_folder(self, user_name, password, folder_name, proxy=False):
+    #     """" Create a folder om a mega account
+    #
+    #     Parameters
+    #     ----------
+    #     user_name : str
+    #     password : str
+    #     folder_name : str
+    #         Root is written as /Root/ instead of /
+    #     proxy : str, optional
+    #         Socks5 url
+    #
+    #     """
+    #
+    #     cmd = f"{self.tools_path} mkdir {folder_name} -u {user_name} -p {password}"
+    #     if proxy:
+    #         cmd += f" --proxy={proxy}"
+    #     self.logger.debug(cmd)
+    #
+    #     return bool(subprocess.Popen(cmd, shell=True).wait() == 0)
 
     def upload_file(self, username, password, remote_path, file_path, proxy=False):
         """" Uploads a file to mega
@@ -367,14 +369,19 @@ class MegaAbuse(CreateAccount, MegaCmd):
             user_name = list(credentials.keys())[0]
             password = credentials[user_name]
 
+            self.login(user_name, password)
+
             folder_name = resume_data[c_counter]["folder name"]
             uploaded_files = resume_data[c_counter]["uploaded files"]
 
             # Create folder
-            remote_path = f"/Root/{folder_name}"
-            if not self.create_folder(user_name, password, remote_path, proxy):
-                self.logger.error("Could not create folder: %s", remote_path)
-                raise Exception(f"Could not create folder: {remote_path}")
+            # remote_path = f"/Root/{folder_name}"
+            # if not self.create_folder(user_name, password, remote_path, proxy):
+            #     self.logger.error("Could not create folder: %s", remote_path)
+            #     raise Exception(f"Could not create folder: {remote_path}")
+            if not self.create_folder(folder_name):
+                self.logger.error("Could not create folder: %s", folder_name)
+                raise Exception(f"Could not create folder: {folder_name}")
 
             for file in chunk["files"]:
                 if file not in uploaded_files:
@@ -413,7 +420,8 @@ class MegaAbuse(CreateAccount, MegaCmd):
                 self.logger.debug("Exporting: %s", f"/{folder_name}")
                 # Folder path is with / instead of /Root because the export folder function
                 # uses megacmd instead of megatools.
-                export_url = super().export_folder(user_name, password, f"/{folder_name}")
+                # export_url = super().export_folder(user_name, password, f"/{folder_name}")
+                export_url = self.export(folder_name)
                 export_urls.append(export_url)
 
                 # Write export url to resume file
