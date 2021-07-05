@@ -64,6 +64,10 @@ sudo ldconfig
 ```
 coming soon
 ```
+### Alpine
+```
+coming soon
+```
 ## Usage
 ``./MEGAabuse.py -h``  
 ``./MEGAabuse.py -d <path to folder i want to upload>``  
