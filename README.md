@@ -13,7 +13,6 @@ Tested primarily with pictures, videos, PDFs, and zip files, it may not work wel
 If you have ideas for new features, want to address any of these limitations, or wish to contribute from the todo list, pull requests are always welcome!
 
 ## Install instructions
-
 ### Ubuntu (20.04.2)
 ```bash
 git clone git@github.com:11philip22/MEGAabuse.git
