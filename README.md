@@ -5,20 +5,16 @@ __  /|_/ /__  __/  _  / __ __  /| |  __ `/_  __ \  / / /_  ___/  _ \
 _  /  / / _  /___  / /_/ / _  ___ / /_/ /_  /_/ / /_/ /_(__  )/  __/
 /_/  /_/  /_____/  \____/  /_/  |_\__,_/ /_.___/\__,_/ /____/ \___/ 
 ````
-# Warning: this program should never be used by anyone
-# I am not responsible for any violations of the mega TOS
-In her current state this program only really supports bulk uploading of mostly the same file types.  
-It skips json files by default. It does not respect folder hierarchy.  
-So if you have a folder containing multiple subfolders with for example jpeg's.  
-It will dump all the contents of the different subfolders into the MEGA root.  
-  
-The program is tested and originally intended to be used with: pictures, videos, pdf's, and zip files.  
-And will not play nice with more complex folder structures like a .git directory.  
-  
-If you know a nice feature, wanna fix one of the above mentioned limitations or implement something from the todo list.   
-PR's are always welcome :)
+This program automates the creation of multiple MEGA accounts and distributes uploaded files across them.
+It is designed for bulk uploading of similar file types and skips JSON files by default.
+Folder hierarchy is not preserved—files from subfolders are all uploaded to the MEGA root directory.
+Tested primarily with pictures, videos, PDFs, and zip files, it may not work well with complex folder structures (e.g., .git directories).
+
+If you have ideas for new features, want to address any of these limitations, or wish to contribute from the todo list, pull requests are always welcome!
+
 ## Install instructions
-### Ubuntu
+
+### Ubuntu (20.04.2)
 ```bash
 git clone git@github.com:11philip22/MEGAabuse.git
 sudo apt update
@@ -28,27 +24,14 @@ chmod +x MEGAabuse/binaries/megacmd_linux/*
 chmod +x MEGAabuse/binaries/megatools_linux/*
 chmod +x MEGAabuse/MEGAabuse.py
 ```
+
 ```bash
 sudo apt install libc-ares-dev libcrypto++6 libfreeimage3
 cd MEGAabuse/megaabuse/mega/
 sudo cp libmega.so /usr/local/lib/
 sudo ldconfig
 ```
-This is what i needed to do to get it to work on Ubuntu 20.04.2.  
-If you are getting errors related to either megacmd or megatools like the one below.
-```
-Traceback (most recent call last):
-  File "MEGAabuse.py", line 348, in <module>
-    upload_manager(upload_queue)  # Start Upload process
-  File "MEGAabuse.py", line 285, in upload_manager
-    results = pool.map(worker, queue)  # Map pool to upload queue
-  File "/usr/lib/python3.8/multiprocessing/pool.py", line 364, in map
-    return self._map_async(func, iterable, mapstar, chunksize).get()
-  File "/usr/lib/python3.8/multiprocessing/pool.py", line 771, in get
-    raise self._value
-subprocess.CalledProcessError: Command '/home/philip/Devel/MEGAabuse/binaries/megatools_linux/megatools reg ...' returned non-zero exit status 126.
-```
-Manually run the command from ``CalledProcessError`` in your shell and see what packages you are missing/
+
 ### Arch
 ```bash
 sudo pacman -S c-ares libraw crypto++ libsodium freeimage
@@ -60,22 +43,11 @@ cd MEGAabuse/megaabuse/mega/
 sudo cp libmega.so /usr/local/lib/
 sudo ldconfig
 ```
-### Debian
-```
-coming soon
-```
-### Alpine
-```
-coming soon
-```
+
 ## Usage
 ``./MEGAabuse.py -h``  
 ``./MEGAabuse.py -d <path to folder i want to upload>``  
 ``./MEGAabuse.py -d <path to folder i want to upload> <second path> <more paths>``
-## Todo
-- [ ] Full windows support
-- [ ] MacOS support
-- [ ] Keep sub-folder hierarchy
-- [ ] Compile the latest bins or remove them from project
+
 ## Acknowledgements
 - https://github.com/ncjones/python-guerrillamail
